@@ -13,6 +13,7 @@ export const getSettings = () => {
 export const updateSettings = (data: Record<string, string>) => {
   const db = getDatabase();
   const results: Setting[] = [];
+  // Normalize legacy/frontend alias keys to canonical settings table keys.
   const canonicalKey = (key: string) =>
     ({
       taxId: "companyTaxId",
@@ -20,23 +21,20 @@ export const updateSettings = (data: Record<string, string>) => {
       email: "companyEmail",
       countryCode: "companyCountryCode",
     })[key] ?? key;
+  const clearableKeys = new Set([
+    "companyTaxId",
+    "companyPhone",
+    "companyEmail",
+    "companyCountryCode",
+    "companyCity",
+    "companyPostalCode",
+    "locale",
+  ]);
 
   for (const [key, raw] of Object.entries(data)) {
     const targetKey = canonicalKey(key);
     // Treat explicit empty strings for certain keys as clearing the setting
-    const shouldClear = [
-      "companyTaxId",
-      "taxId", // alias that may slip through
-      "companyPhone",
-      "phone", // alias
-      "companyEmail",
-      "email", // alias
-      "companyCountryCode",
-      "countryCode", // alias
-      "companyCity",
-      "companyPostalCode",
-      "locale",
-    ].includes(key) && String(raw).trim() === "";
+    const shouldClear = clearableKeys.has(targetKey) && String(raw).trim() === "";
 
     const value = shouldClear ? "" : String(raw);
     // Upsert the setting
