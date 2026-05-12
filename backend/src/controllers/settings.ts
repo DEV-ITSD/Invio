@@ -13,8 +13,16 @@ export const getSettings = () => {
 export const updateSettings = (data: Record<string, string>) => {
   const db = getDatabase();
   const results: Setting[] = [];
+  const canonicalKey = (key: string) =>
+    ({
+      taxId: "companyTaxId",
+      phone: "companyPhone",
+      email: "companyEmail",
+      countryCode: "companyCountryCode",
+    })[key] ?? key;
 
   for (const [key, raw] of Object.entries(data)) {
+    const targetKey = canonicalKey(key);
     // Treat explicit empty strings for certain keys as clearing the setting
     const shouldClear = [
       "companyTaxId",
@@ -30,24 +38,15 @@ export const updateSettings = (data: Record<string, string>) => {
       "locale",
     ].includes(key) && String(raw).trim() === "";
 
-    if (shouldClear) {
-      // delete the setting row if present
-      db.query("DELETE FROM settings WHERE key = ?", [
-        key === "taxId" ? "companyTaxId" : key,
-      ]);
-      results.push({ key: key === "taxId" ? "companyTaxId" : key, value: "" });
-      continue;
-    }
-
-    const value = String(raw);
+    const value = shouldClear ? "" : String(raw);
     // Upsert the setting
-    const existing = db.query("SELECT * FROM settings WHERE key = ?", [key]);
+    const existing = db.query("SELECT * FROM settings WHERE key = ?", [targetKey]);
     if (existing.length > 0) {
-      db.query("UPDATE settings SET value = ? WHERE key = ?", [value, key]);
+      db.query("UPDATE settings SET value = ? WHERE key = ?", [value, targetKey]);
     } else {
-      db.query("INSERT INTO settings (key, value) VALUES (?, ?)", [key, value]);
+      db.query("INSERT INTO settings (key, value) VALUES (?, ?)", [targetKey, value]);
     }
-    results.push({ key, value });
+    results.push({ key: targetKey, value });
   }
 
   return results;
