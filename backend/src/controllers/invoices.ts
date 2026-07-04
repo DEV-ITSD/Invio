@@ -254,7 +254,7 @@ export const createInvoice = (
       if (rows.length > 0) {
         const pattern = String((rows[0] as unknown[])[0] || "").trim();
         if (pattern && /\{SEQ\}/.test(pattern)) {
-          invoiceNumber = getNextInvoiceNumber();
+          invoiceNumber = getNextInvoiceNumber(data.customerId);
         } else {
           invoiceNumber = generateDraftInvoiceNumber();
         }
@@ -928,7 +928,9 @@ export const updateInvoice = async (
       !nextInvoiceNumber &&
       existing.invoiceNumber.startsWith("DRAFT-")
     ) {
-      const finalNum = getNextInvoiceNumber();
+      const finalNum = getNextInvoiceNumber(
+        data.customerId ?? existing.customerId,
+      );
       db.query(
         "UPDATE invoices SET invoice_number = ?, updated_at = ? WHERE id = ?",
         [finalNum, new Date(), id],
@@ -1242,7 +1244,7 @@ export const publishInvoice = async (
     const now = new Date();
     let num = invoice.invoiceNumber;
     if (num.startsWith("DRAFT-")) {
-      num = getNextInvoiceNumber();
+      num = getNextInvoiceNumber(invoice.customerId);
     }
     db.execute("BEGIN");
     try {

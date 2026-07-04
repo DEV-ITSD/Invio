@@ -756,12 +756,17 @@ function getNumberingSettings(): {
   return cfg;
 }
 
-/** Find the highest existing sequential suffix matching `likePrefix%`. */
-function findMaxSequence(likePrefix: string): number {
-  const rows = db.query(
-    "SELECT invoice_number FROM invoices WHERE invoice_number LIKE ?",
-    [likePrefix + "%"],
-  );
+/** Find the highest existing sequential suffix matching `likePrefix%`, optionally scoped to a single customer. */
+function findMaxSequence(likePrefix: string, customerId?: string): number {
+  const rows = customerId
+    ? db.query(
+      "SELECT invoice_number FROM invoices WHERE invoice_number LIKE ? AND customer_id = ?",
+      [likePrefix + "%", customerId],
+    )
+    : db.query(
+      "SELECT invoice_number FROM invoices WHERE invoice_number LIKE ?",
+      [likePrefix + "%"],
+    );
   const escaped = likePrefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const re = new RegExp(`^${escaped}(\\d+).*?$`);
   let max = 0;
@@ -788,7 +793,7 @@ function expandPatternTokens(pattern: string): string {
     .replace(/\{RAND4\}/g, () => cryptoRandom(4));
 }
 
-export function getNextInvoiceNumber(): string {
+export function getNextInvoiceNumber(customerId?: string): string {
   const cfg = getNumberingSettings();
 
   // Advanced pattern mode (when enabled and configured)
@@ -797,7 +802,7 @@ export function getNextInvoiceNumber(): string {
     if (!/\{SEQ\}/.test(cfg.pattern)) return expanded;
 
     const prefix = expanded.split("{SEQ}")[0];
-    const next = findMaxSequence(prefix) + 1;
+    const next = findMaxSequence(prefix, customerId) + 1;
     return expanded.replace(/\{SEQ\}/g, String(next).padStart(3, "0"));
   }
 
@@ -805,7 +810,7 @@ export function getNextInvoiceNumber(): string {
   const base = cfg.includeYear
     ? `${cfg.prefix}-${new Date().getFullYear()}-`
     : `${cfg.prefix}-`;
-  const next = findMaxSequence(base) + 1;
+  const next = findMaxSequence(base, customerId) + 1;
   return `${base}${String(next).padStart(cfg.pad, "0")}`;
 }
 
