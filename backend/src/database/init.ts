@@ -799,18 +799,31 @@ export function getNextInvoiceNumber(customerId?: string): string {
   // Advanced pattern mode (when enabled and configured)
   if (cfg.pattern && cfg.enabled) {
     const expanded = expandPatternTokens(cfg.pattern);
-    if (!/\{SEQ\}/.test(cfg.pattern)) return expanded;
+    const hasSeq = /\{SEQ\}/.test(cfg.pattern);
+    const hasClientSeq = /\{CSEQ\}/.test(cfg.pattern);
+    if (!hasSeq && !hasClientSeq) return expanded;
 
-    const prefix = expanded.split("{SEQ}")[0];
-    const next = findMaxSequence(prefix, customerId) + 1;
-    return expanded.replace(/\{SEQ\}/g, String(next).padStart(3, "0"));
+    let result = expanded;
+    if (hasSeq) {
+      // {SEQ}: global counter, shared across all customers
+      const prefix = expanded.split("{SEQ}")[0];
+      const next = findMaxSequence(prefix) + 1;
+      result = result.replace(/\{SEQ\}/g, String(next).padStart(3, "0"));
+    }
+    if (hasClientSeq) {
+      // {CSEQ}: counter scoped to this customer's own invoices
+      const prefix = expanded.split("{CSEQ}")[0];
+      const next = findMaxSequence(prefix, customerId) + 1;
+      result = result.replace(/\{CSEQ\}/g, String(next).padStart(3, "0"));
+    }
+    return result;
   }
 
-  // Legacy mode: PREFIX-YYYY-NNN
+  // Legacy mode: PREFIX-YYYY-NNN (global, no per-client variant)
   const base = cfg.includeYear
     ? `${cfg.prefix}-${new Date().getFullYear()}-`
     : `${cfg.prefix}-`;
-  const next = findMaxSequence(base, customerId) + 1;
+  const next = findMaxSequence(base) + 1;
   return `${base}${String(next).padStart(cfg.pad, "0")}`;
 }
 
