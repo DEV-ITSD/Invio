@@ -160,6 +160,32 @@ function ensureCustomerColumns(database: DB): void {
   addColumnIfMissing(database, "customers", "country_code", "TEXT");
   addColumnIfMissing(database, "customers", "city", "TEXT");
   addColumnIfMissing(database, "customers", "postal_code", "TEXT");
+  addColumnIfMissing(database, "customers", "customer_number", "INTEGER");
+}
+
+/** Assign a permanent sequential customer_number (by creation order) to any customer missing one. */
+function backfillCustomerNumbers(database: DB): void {
+  const rows = database.query(
+    "SELECT id FROM customers WHERE customer_number IS NULL ORDER BY created_at ASC, id ASC",
+  ) as unknown[][];
+  if (rows.length === 0) return;
+
+  const maxRow = database.query(
+    "SELECT COALESCE(MAX(customer_number), 0) FROM customers",
+  ) as unknown[][];
+  let next = Number((maxRow[0] as unknown[])[0]) + 1;
+
+  for (const row of rows) {
+    database.query("UPDATE customers SET customer_number = ? WHERE id = ?", [
+      next,
+      String(row[0]),
+    ]);
+    next++;
+  }
+
+  console.log(
+    `  Backfilled customer_number for ${rows.length} existing customer(s).`,
+  );
 }
 
 function ensureInvoiceColumns(database: DB): void {
@@ -455,6 +481,7 @@ function migrateInvoicesForVoided(database: DB): void {
 function ensureSchemaUpgrades(database: DB): void {
   try {
     ensureCustomerColumns(database);
+    backfillCustomerNumbers(database);
     ensureInvoiceColumns(database);
     ensureTaxTables(database);
     ensureProductTables(database);
@@ -777,6 +804,22 @@ function findMaxSequence(likePrefix: string, customerId?: string): number {
   return max;
 }
 
+/** Look up a customer's permanent sequential customer_number, if any. */
+function getCustomerNumber(customerId?: string): number | null {
+  if (!customerId) return null;
+  try {
+    const rows = db.query(
+      "SELECT customer_number FROM customers WHERE id = ?",
+      [customerId],
+    ) as unknown[][];
+    if (rows.length === 0) return null;
+    const v = rows[0][0];
+    return v == null ? null : Number(v);
+  } catch {
+    return null;
+  }
+}
+
 /** Expand date/random tokens in an invoice-number pattern. */
 function expandPatternTokens(pattern: string): string {
   const now = new Date();
@@ -801,18 +844,32 @@ export function getNextInvoiceNumber(customerId?: string): string {
     const expanded = expandPatternTokens(cfg.pattern);
     const hasSeq = /\{SEQ\}/.test(cfg.pattern);
     const hasClientSeq = /\{CSEQ\}/.test(cfg.pattern);
-    if (!hasSeq && !hasClientSeq) return expanded;
+    const hasCustomerNum = /\{CNUM\}/.test(cfg.pattern);
+    if (!hasSeq && !hasClientSeq && !hasCustomerNum) return expanded;
 
     let result = expanded;
+    // {CNUM} must resolve first: {SEQ}/{CSEQ} scan existing invoice_number
+    // values using everything before them as a LIKE prefix, so that prefix
+    // has to be fully literal (no leftover {CNUM} placeholder) or it will
+    // never match a real stored invoice number and the counter always
+    // reads as empty (stuck at 1).
+    if (hasCustomerNum) {
+      // {CNUM}: the customer's own permanent sequential number
+      const custNum = getCustomerNumber(customerId);
+      result = result.replace(
+        /\{CNUM\}/g,
+        custNum != null ? String(custNum).padStart(3, "0") : "",
+      );
+    }
     if (hasSeq) {
       // {SEQ}: global counter, shared across all customers
-      const prefix = expanded.split("{SEQ}")[0];
+      const prefix = result.split("{SEQ}")[0];
       const next = findMaxSequence(prefix) + 1;
       result = result.replace(/\{SEQ\}/g, String(next).padStart(3, "0"));
     }
     if (hasClientSeq) {
       // {CSEQ}: counter scoped to this customer's own invoices
-      const prefix = expanded.split("{CSEQ}")[0];
+      const prefix = result.split("{CSEQ}")[0];
       const next = findMaxSequence(prefix, customerId) + 1;
       result = result.replace(/\{CSEQ\}/g, String(next).padStart(3, "0"));
     }
