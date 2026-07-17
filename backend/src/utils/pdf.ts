@@ -199,26 +199,30 @@ function normalizeLogoUrlForRender(
   return value;
 }
 
+type NumberFormat = "comma" | "period" | "swiss";
+
 function formatMoney(
-  value: number,
-  currency: string,
-  numberFormat: "comma" | "period" = "comma",
+    value: number,
+    currency: string,
+    numberFormat: NumberFormat = "comma",
 ): string {
-  // Create a custom locale based on the number format preference
   let locale: string;
-  let options: Intl.NumberFormatOptions;
 
   if (numberFormat === "period") {
-    // European style: 1.000,00
-    locale = "de-DE"; // German locale uses period as thousands separator and comma as decimal
-    options = { style: "currency", currency };
+    // 1.000,00
+    locale = "de-DE";
+  } else if (numberFormat === "swiss") {
+    // 1'000.00
+    locale = "de-CH";
   } else {
-    // US style: 1,000.00
+    // 1,000.00
     locale = "en-US";
-    options = { style: "currency", currency };
   }
 
-  return new Intl.NumberFormat(locale, options).format(value);
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+  }).format(value);
 }
 
 async function _inlineLogoIfPossible(
@@ -280,7 +284,7 @@ function buildContext(
   settings?: BusinessSettings & { logoUrl?: string; brandLayout?: string },
   _highlight?: string,
   dateFormat?: string,
-  numberFormat?: "comma" | "period",
+  numberFormat?: NumberFormat,
   localeOverride?: string,
   forceAbsoluteLogoUrl = false,
 ): TemplateContext & { logoUrl?: string; brandLogoLeft?: boolean } {
@@ -438,7 +442,7 @@ export async function generateInvoicePDF(
     embedXml?: boolean;
     xmlOptions?: Record<string, unknown>;
     dateFormat?: string;
-    numberFormat?: "comma" | "period";
+    numberFormat?: NumberFormat;
     locale?: string;
   },
 ): Promise<Uint8Array> {
@@ -489,7 +493,7 @@ export function buildInvoiceHTML(
   templateId?: string,
   highlight?: string,
   dateFormat?: string,
-  numberFormat?: "comma" | "period",
+  numberFormat?: NumberFormat,
   localeOverride?: string,
   forceAbsoluteLogoUrl = false,
 ): string {

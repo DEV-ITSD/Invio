@@ -542,6 +542,7 @@
               <select class="select select-bordered w-full" bind:value={settings.numberFormat} disabled={!canUpdateSettings}>
                 <option value="comma">1,000.00</option>
                 <option value="period">1.000,00</option>
+                <option value="swiss">1'000.00</option>
               </select>
             </label>
             <label class="form-control"

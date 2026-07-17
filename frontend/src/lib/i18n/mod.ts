@@ -58,7 +58,7 @@ export type LocalizationConfig = {
   locale: string;
   messages: UiMessages;
   t: TranslateFn;
-  numberFormat: "comma" | "period";
+  numberFormat: "comma" | "period" | "swiss";
   dateFormat: string;
   postalCityFormat: "auto" | "city-postal" | "postal-city";
 };
@@ -77,7 +77,9 @@ export function resolveLocalization(
   postalCityFormat?: string,
 ): LocalizationConfig {
   const { locale: normalized, messages, t } = createTranslator(locale);
-  const nf = numberFormat === "period" ? "period" : "comma";
+  const nf = numberFormat === "period" || numberFormat === "swiss"
+      ? numberFormat
+      : "comma";
   const df =
     typeof dateFormat === "string" && dateFormat.trim()
       ? dateFormat

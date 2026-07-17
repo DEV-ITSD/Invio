@@ -268,7 +268,9 @@ function normalizeLocaleSettingPayload(data: Record<string, unknown>) {
       .trim()
       .toLowerCase();
     (data as Record<string, unknown>).numberFormat =
-      rawNumberFormat === "period" ? "period" : "comma";
+        rawNumberFormat === "period" || rawNumberFormat === "swiss"
+            ? rawNumberFormat
+            : "comma";
   }
 
   if (Object.prototype.hasOwnProperty.call(data, "dateFormat")) {

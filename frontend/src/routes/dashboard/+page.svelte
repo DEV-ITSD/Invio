@@ -15,7 +15,11 @@
   function fmtMoney(n: number) {
     const cur = data.money?.currency || "USD";
     try {
-      const locale = numberFormat === "period" ? "de-DE" : "en-US";
+      const locale = numberFormat === "period"
+        ? "de-DE"
+        : numberFormat === "swiss"
+          ? "de-CH"
+          : "en-US";
       return new Intl.NumberFormat(locale, {
         style: "currency",
         currency: cur,
