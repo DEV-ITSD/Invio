@@ -757,7 +757,13 @@ adminRoutes.delete(
   async (c) => {
     const id = c.req.param("id");
     // Built-in templates are protected
-    const builtin = new Set(["professional-modern", "minimalist-clean"]);
+    const builtin = new Set([
+      "professional-modern",
+      "minimalist-clean",
+      "nova",
+      "swiss",
+      "slate",
+    ]);
     if (builtin.has(id)) {
       return c.json({ error: "Cannot delete built-in templates" }, 400);
     }
