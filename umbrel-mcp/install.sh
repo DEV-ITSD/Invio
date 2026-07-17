@@ -32,6 +32,11 @@ tunnel_id="${1:-}"
 source_ref="${2:-${DEFAULT_SOURCE_REF}}"
 [[ "${tunnel_id}" =~ ${EXPECTED_TUNNEL_PATTERN} ]] || die "Pass a valid tunnel_id as the first argument."
 [[ "${source_ref}" =~ ^[A-Za-z0-9._-]{1,80}$ ]] || die "Invalid source ref."
+if [[ "${source_ref}" =~ ^[a-f0-9]{40}$ ]]; then
+  mcp_image_tag="sha-${source_ref}"
+else
+  mcp_image_tag="latest"
+fi
 
 umask 077
 mkdir -p "${INSTALL_ROOT}" "${SECRETS_DIR}" "${STATE_DIR}"
@@ -70,7 +75,7 @@ cp -a "${archive_root}/umbrel-mcp/." "${SOURCE_DIR}/"
 
 cat > "${SOURCE_DIR}/.env" <<EOF
 TUNNEL_ID=${tunnel_id}
-MCP_IMAGE_TAG=latest
+MCP_IMAGE_TAG=${mcp_image_tag}
 EOF
 chmod 600 "${SOURCE_DIR}/.env"
 
