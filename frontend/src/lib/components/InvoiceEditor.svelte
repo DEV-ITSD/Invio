@@ -21,7 +21,7 @@
   let form = $state({
     customerId: initInvoice?.customerId || "",
     invoiceNumber: initInvoice?.invoiceNumber ?? initNextInvoiceNumber,
-    currency: initInvoice?.currency || "EUR",
+    currency: initInvoice?.currency || initSettings.currency || "EUR",
     status: initInvoice?.status || "draft",
     issueDate: initInvoice?.issueDate ? new Date(initInvoice.issueDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
     dueDate: initInvoice?.dueDate ? new Date(initInvoice.dueDate).toISOString().slice(0, 10) : "",
