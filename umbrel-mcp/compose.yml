@@ -1,0 +1,79 @@
+name: invio-mcp
+
+services:
+  mcp:
+    container_name: invio_mcp_bridge_1
+    image: ghcr.io/dev-itsd/invio-umbrel-mcp:${MCP_IMAGE_TAG:-latest}
+    build:
+      context: .
+    restart: unless-stopped
+    user: "0:0"
+    uts: host
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      UMBREL_ROOT: /home/umbrel/umbrel
+      UMBREL_APP_SCRIPT: /opt/umbreld/source/modules/apps/legacy-compat/app-script
+      UMBREL_DOCKER_FRAGMENTS: /opt/umbreld/source/modules/apps/legacy-compat
+      MCP_SHARED_SECRET_FILE: /run/secrets/mcp-shared-secret
+      STATE_DIR: /state
+      PORT: "8765"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /home/umbrel/umbrel:/home/umbrel/umbrel
+      - /opt/umbreld/source:/opt/umbreld/source:ro
+      - ../state:/state
+      - ../secrets/mcp-shared-secret:/run/secrets/mcp-shared-secret:ro
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+      - /root:size=16m,mode=0700
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8765/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  tunnel:
+    container_name: invio_mcp_tunnel_1
+    image: ghcr.io/dev-itsd/invio-umbrel-mcp:${MCP_IMAGE_TAG:-latest}
+    build:
+      context: .
+    restart: unless-stopped
+    user: "0:0"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      mcp:
+        condition: service_healthy
+    command:
+      - /usr/local/bin/tunnel-client
+      - run
+      - --control-plane.tunnel-id=${TUNNEL_ID}
+      - --control-plane.api-key=file:/run/secrets/control-plane-api-key
+      - --mcp.server-url=http://mcp:8765/mcp
+      - --mcp.extra-headers
+      - "X-Invio-MCP-Key: file:/run/secrets/mcp-shared-secret"
+      - --mcp.discovery-extra-headers
+      - "X-Invio-MCP-Key: file:/run/secrets/mcp-shared-secret"
+      - --health.listen-addr=0.0.0.0:8080
+      - --log.level=info
+      - --log.format=json
+    volumes:
+      - ../secrets/control-plane-api-key:/run/secrets/control-plane-api-key:ro
+      - ../secrets/mcp-shared-secret:/run/secrets/mcp-shared-secret:ro
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /root:size=16m,mode=0700
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 15s
