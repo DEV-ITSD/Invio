@@ -508,6 +508,7 @@ const BUILTIN_TEMPLATES = [
   { id: "professional-modern", name: "Professional Modern", isDefault: false },
   { id: "minimalist-clean", name: "Minimalist Clean", isDefault: true },
   { id: "nova", name: "Nova", isDefault: false },
+  { id: "swiss", name: "Swiss", isDefault: false },
   { id: "slate", name: "Slate", isDefault: false },
 ] as const;
 
