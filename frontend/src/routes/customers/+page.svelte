@@ -35,6 +35,9 @@
     <a href={`/customers/${c.id}`} class="card bg-base-100 border-base-300 border transition-shadow hover:shadow-md">
       <div class="card-body p-4">
         <div class="link font-semibold">{c.name || c.id}</div>
+        {#if c.customerAbbreviation}
+          <div class="badge badge-ghost badge-sm mt-1">{c.customerAbbreviation}</div>
+        {/if}
         {#if c.email}
           <div class="mt-1 text-sm opacity-70">{c.email}</div>
         {/if}
@@ -59,6 +62,7 @@
     <thead class="bg-base-200 text-base-content">
       <tr class="font-medium">
         <th>{t("Name")}</th>
+        <th>{t("Customer Abbreviation")}</th>
         <th>{t("Contact Name")}</th>
         <th>{t("Address")}</th>
         <th>{t("City")} / {t("Postal Code")}</th>
@@ -71,6 +75,7 @@
           <td>
             <a class="link" href={`/customers/${c.id}`}>{c.name || c.id}</a>
           </td>
+          <td class="font-mono opacity-70">{c.customerAbbreviation || "-"}</td>
           <td class="opacity-70">{c.contactName || ""}</td>
           <td class="opacity-70">{c.address || ""}</td>
           <td class="opacity-70">{formatPostalCityLine(c.city, c.postalCode, c.countryCode, getLoc()?.postalCityFormat) || "-"}</td>
@@ -79,7 +84,7 @@
       {/each}
       {#if customers.length === 0}
         <tr>
-          <td colspan="2" class="py-10 text-center text-sm opacity-70">
+          <td colspan="6" class="py-10 text-center text-sm opacity-70">
             <span>
               {t("No customers yet.")}
               <a href="/customers/new" class="link">{t("Create your first customer")}</a>.

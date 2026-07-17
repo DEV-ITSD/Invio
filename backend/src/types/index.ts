@@ -12,6 +12,7 @@ export interface Customer {
   reference?: string; // BuyerReference or order ref
   createdAt: Date;
   customerNumber?: number; // permanent sequential number, assigned at creation
+  customerAbbreviation?: string; // 1-3 uppercase alphanumeric characters
 }
 
 export interface Product {
@@ -293,6 +294,7 @@ export interface CreateCustomerRequest {
   postalCode?: string;
   countryCode?: string; // ISO alpha-2
   taxId?: string;
+  customerAbbreviation?: string;
 }
 
 export interface CreateProductRequest {

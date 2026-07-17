@@ -35,9 +35,17 @@ export const actions: Actions = {
     const postalCode = String(form.get("postalCode") || "");
     const taxId = String(form.get("taxId") || "");
     const countryCode = String(form.get("countryCode") || "");
+    const customerAbbreviation = String(form.get("customerAbbreviation") || "")
+      .trim()
+      .toUpperCase();
 
     if (!name) {
       return fail(400, { error: "Name is required" });
+    }
+    if (customerAbbreviation && !/^[A-Z0-9]{1,3}$/.test(customerAbbreviation)) {
+      return fail(400, {
+        error: "Customer abbreviation must contain 1 to 3 letters or numbers",
+      });
     }
 
     let created: any;
@@ -52,11 +60,12 @@ export const actions: Actions = {
         postalCode: postalCode || undefined,
         taxId: taxId || undefined,
         countryCode: countryCode || undefined,
+        customerAbbreviation: customerAbbreviation || undefined,
       });
     } catch (e: any) {
       if (e && typeof e === "object" && "status" in e && "location" in e)
         throw e;
-      return fail(500, { error: e.message || String(e) });
+      return fail(400, { error: e.message || String(e) });
     }
 
     if (created && created.id) {

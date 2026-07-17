@@ -168,7 +168,28 @@ function deriveLocaleFromCountryCode(countryCode?: string): string | undefined {
   if (code === "DE" || code === "AT" || code === "CH") return "de";
   if (code === "NL" || code === "BE") return "nl";
   if (code === "PT" || code === "BR") return "pt-br";
-  if (["AU", "CA", "GB", "IE", "NZ", "US", "AG", "BS", "BB", "BZ", "DM", "GD", "GY", "JM", "KN", "LC", "VC", "TT"].includes(code)) return "en";
+  if (
+    [
+      "AU",
+      "CA",
+      "GB",
+      "IE",
+      "NZ",
+      "US",
+      "AG",
+      "BS",
+      "BB",
+      "BZ",
+      "DM",
+      "GD",
+      "GY",
+      "JM",
+      "KN",
+      "LC",
+      "VC",
+      "TT",
+    ].includes(code)
+  ) return "en";
 
   return undefined;
 }
@@ -268,9 +289,9 @@ function normalizeLocaleSettingPayload(data: Record<string, unknown>) {
       .trim()
       .toLowerCase();
     (data as Record<string, unknown>).numberFormat =
-        rawNumberFormat === "period" || rawNumberFormat === "swiss"
-            ? rawNumberFormat
-            : "comma";
+      rawNumberFormat === "period" || rawNumberFormat === "swiss"
+        ? rawNumberFormat
+        : "comma";
   }
 
   if (Object.prototype.hasOwnProperty.call(data, "dateFormat")) {
@@ -1148,9 +1169,15 @@ adminRoutes.post(
   "/customers",
   requirePermission("customers", "create"),
   async (c) => {
-    const data = await c.req.json();
-    const customer = createCustomer(data);
-    return c.json(customer);
+    try {
+      const data = await c.req.json();
+      const customer = createCustomer(data);
+      return c.json(customer);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const status = message.includes("already in use") ? 409 : 400;
+      return c.json({ error: message }, status);
+    }
   },
 );
 
@@ -1158,10 +1185,17 @@ adminRoutes.put(
   "/customers/:id",
   requirePermission("customers", "update"),
   async (c) => {
-    const id = c.req.param("id");
-    const data = await c.req.json();
-    const customer = await updateCustomer(id, data);
-    return c.json(customer);
+    try {
+      const id = c.req.param("id");
+      const data = await c.req.json();
+      const customer = await updateCustomer(id, data);
+      if (!customer) return c.json({ error: "Customer not found" }, 404);
+      return c.json(customer);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const status = message.includes("already in use") ? 409 : 400;
+      return c.json({ error: message }, status);
+    }
   },
 );
 
@@ -1666,7 +1700,10 @@ adminRoutes.post(
   async (c) => {
     if (!isEmailConfigured()) {
       return c.json(
-        { error: "Email is not configured. Set SMTP2GO_API_KEY and EMAIL_FROM_ADDRESS." },
+        {
+          error:
+            "Email is not configured. Set SMTP2GO_API_KEY and EMAIL_FROM_ADDRESS.",
+        },
         503,
       );
     }
@@ -1680,7 +1717,11 @@ adminRoutes.post(
     let message = "";
     try {
       const body = await c.req.json();
-      to = Array.isArray(body.to) ? body.to.filter((e: unknown) => typeof e === "string" && e.includes("@")) : [];
+      to = Array.isArray(body.to)
+        ? body.to.filter((e: unknown) =>
+          typeof e === "string" && e.includes("@")
+        )
+        : [];
       subject = typeof body.subject === "string" ? body.subject.trim() : "";
       message = typeof body.message === "string" ? body.message.trim() : "";
     } catch {
@@ -1688,7 +1729,10 @@ adminRoutes.post(
     }
 
     if (to.length === 0) {
-      return c.json({ error: "At least one valid recipient email is required" }, 400);
+      return c.json(
+        { error: "At least one valid recipient email is required" },
+        400,
+      );
     }
     if (!subject) {
       return c.json({ error: "Subject is required" }, 400);
@@ -1697,7 +1741,10 @@ adminRoutes.post(
     // Build settings map (same as /pdf route)
     const settings = await getSettings();
     const settingsMap = settings.reduce(
-      (acc: Record<string, string>, s) => { acc[s.key] = s.value as string; return acc; },
+      (acc: Record<string, string>, s) => {
+        acc[s.key] = s.value as string;
+        return acc;
+      },
       {} as Record<string, string>,
     );
     if (!settingsMap.postalCityFormat && settingsMap.postal_city_format) {
@@ -1728,10 +1775,17 @@ adminRoutes.post(
     };
 
     const highlight = settingsMap.highlight ?? undefined;
-    let selectedTemplateId: string | undefined = settingsMap.templateId?.toLowerCase();
-    if (selectedTemplateId === "professional" || selectedTemplateId === "professional-modern") {
+    let selectedTemplateId: string | undefined = settingsMap.templateId
+      ?.toLowerCase();
+    if (
+      selectedTemplateId === "professional" ||
+      selectedTemplateId === "professional-modern"
+    ) {
       selectedTemplateId = "professional-modern";
-    } else if (selectedTemplateId === "minimalist" || selectedTemplateId === "minimalist-clean") {
+    } else if (
+      selectedTemplateId === "minimalist" ||
+      selectedTemplateId === "minimalist-clean"
+    ) {
       selectedTemplateId = "minimalist-clean";
     }
 
@@ -1759,13 +1813,18 @@ adminRoutes.post(
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error("Email: PDF generation failed:", msg);
-      return c.json({ error: "Failed to generate PDF attachment", details: msg }, 500);
+      return c.json({
+        error: "Failed to generate PDF attachment",
+        details: msg,
+      }, 500);
     }
 
     // Build email body
     const companyName = businessSettings.companyName;
     const invoiceNumber = invoice.invoiceNumber || invoice.id;
-    const total = `${Number(invoice.total || 0).toFixed(2)} ${invoice.currency || ""}`.trim();
+    const total = `${Number(invoice.total || 0).toFixed(2)} ${
+      invoice.currency || ""
+    }`.trim();
     const issueDate = invoice.issueDate
       ? new Date(invoice.issueDate).toISOString().slice(0, 10)
       : "";
@@ -1779,12 +1838,19 @@ adminRoutes.post(
       : null;
 
     const messageHtml = message
-      ? `<p style="white-space:pre-wrap;">${message.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`
+      ? `<p style="white-space:pre-wrap;">${
+        message.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(
+          />/g,
+          "&gt;",
+        )
+      }</p>`
       : "";
     const shareLinkHtml = shareLink
       ? `<p><a href="${shareLink}" style="color:#2563eb;">View invoice online</a></p>`
       : "";
-    const dueDateHtml = dueDate ? `<tr><td style="padding:4px 8px;color:#6b7280;">Due date</td><td style="padding:4px 8px;">${dueDate}</td></tr>` : "";
+    const dueDateHtml = dueDate
+      ? `<tr><td style="padding:4px 8px;color:#6b7280;">Due date</td><td style="padding:4px 8px;">${dueDate}</td></tr>`
+      : "";
 
     const htmlBody = `<!DOCTYPE html>
 <html>

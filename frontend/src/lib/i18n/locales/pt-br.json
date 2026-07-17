@@ -66,6 +66,8 @@
   "Currency": "Moeda",
   "Custom tax": "Imposto personalizado",
   "Customer": "Cliente",
+  "Customer Abbreviation": "Abreviação do cliente",
+  "Customer abbreviation help": "1 a 3 letras ou números; usado pelo marcador {CUST} da numeração de faturas",
   "Customer Has Associated Invoices": "Cliente possui faturas associadas",
   "Customer has invoices warning": "Este cliente possui uma ou mais faturas associadas. Você deve excluir essas faturas primeiro antes de poder excluir o cliente.",
   "Customer name": "Nome do cliente",

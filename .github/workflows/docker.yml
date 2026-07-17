@@ -49,12 +49,21 @@ jobs:
         shell: bash
         run: echo "name=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
+      - name: Read application version
+        id: version
+        shell: bash
+        run: echo "value=$(tr -d '\r\n' < VERSION)" >> "$GITHUB_OUTPUT"
+
       - name: Generate docker image tags
         id: metadata
         uses: docker/metadata-action@v5
         with:
           images: |
             name=ghcr.io/${{ steps.repo.outputs.name }}-${{ matrix.image }},enable=true
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=raw,value=v${{ steps.version.outputs.value }},enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
 
       - name: Determine cache-to
         id: cache-target
@@ -112,12 +121,21 @@ jobs:
         shell: bash
         run: echo "name=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
+      - name: Read application version
+        id: version
+        shell: bash
+        run: echo "value=$(tr -d '\r\n' < VERSION)" >> "$GITHUB_OUTPUT"
+
       - name: Generate docker image tags for combined image
         id: metadata
         uses: docker/metadata-action@v5
         with:
           images: |
             name=ghcr.io/${{ steps.repo.outputs.name }},enable=true   # ← exactly the repo name
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=raw,value=v${{ steps.version.outputs.value }},enable=${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
 
       - name: Determine cache-to
         id: cache-target

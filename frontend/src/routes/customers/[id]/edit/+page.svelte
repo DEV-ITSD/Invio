@@ -42,6 +42,23 @@
       </div>
 
       <div class="form-control w-full">
+        <label class="label pb-1" for="customerAbbreviation">
+          <span class="label-text">{t("Customer Abbreviation")}</span>
+        </label>
+        <input
+          type="text"
+          id="customerAbbreviation"
+          name="customerAbbreviation"
+          maxlength="3"
+          pattern="[A-Za-z0-9]+"
+          placeholder="ABC"
+          class="input input-sm input-bordered w-full uppercase"
+          value={c.customerAbbreviation || ""}
+        />
+        <div class="label pt-1"><span class="label-text-alt">{t("Customer abbreviation help")}</span></div>
+      </div>
+
+      <div class="form-control w-full">
         <label class="label pb-1" for="contactName">
           <span class="label-text">{t("Contact Name")}</span>
         </label>

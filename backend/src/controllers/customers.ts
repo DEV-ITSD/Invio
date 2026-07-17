@@ -1,6 +1,7 @@
 import { getDatabase } from "../database/init.ts";
 import { CreateCustomerRequest, Customer } from "../types/index.ts";
 import { generateUUID } from "../utils/uuid.ts";
+import { normalizeCustomerAbbreviation } from "../utils/customerAbbreviation.ts";
 
 const mapRowToCustomer = (row: unknown[]): Customer => ({
   id: row[0] as string,
@@ -16,6 +17,7 @@ const mapRowToCustomer = (row: unknown[]): Customer => ({
   city: (row[9] ?? undefined) as string | undefined,
   postalCode: (row[10] ?? undefined) as string | undefined,
   customerNumber: (row[11] ?? undefined) as number | undefined,
+  customerAbbreviation: (row[12] ?? undefined) as string | undefined,
 });
 
 export const getCustomers = () => {
@@ -24,7 +26,7 @@ export const getCustomers = () => {
   let results: unknown[][] = [];
   try {
     results = db.query(
-      "SELECT id, name, contact_name, email, phone, address, country_code, tax_id, created_at, city, postal_code, customer_number FROM customers ORDER BY created_at DESC",
+      "SELECT id, name, contact_name, email, phone, address, country_code, tax_id, created_at, city, postal_code, customer_number, customer_abbreviation FROM customers ORDER BY created_at DESC",
     ) as unknown[][];
   } catch (_e) {
     // fallback older schema
@@ -46,7 +48,7 @@ export const getCustomerById = (id: string): Customer | null => {
   let results: unknown[][] = [];
   try {
     results = db.query(
-      "SELECT id, name, contact_name, email, phone, address, country_code, tax_id, created_at, city, postal_code, customer_number FROM customers WHERE id = ?",
+      "SELECT id, name, contact_name, email, phone, address, country_code, tax_id, created_at, city, postal_code, customer_number, customer_abbreviation FROM customers WHERE id = ?",
       [id],
     ) as unknown[][];
   } catch (_e) {
@@ -79,6 +81,26 @@ const nextCustomerNumber = (db: ReturnType<typeof getDatabase>): number => {
   return Number((rows[0] as unknown[])[0]) + 1;
 };
 
+function ensureUniqueCustomerAbbreviation(
+  db: ReturnType<typeof getDatabase>,
+  abbreviation: string | null,
+  excludeId?: string,
+): void {
+  if (!abbreviation) return;
+  const rows = excludeId
+    ? db.query(
+      "SELECT 1 FROM customers WHERE customer_abbreviation = ? COLLATE NOCASE AND id <> ? LIMIT 1",
+      [abbreviation, excludeId],
+    )
+    : db.query(
+      "SELECT 1 FROM customers WHERE customer_abbreviation = ? COLLATE NOCASE LIMIT 1",
+      [abbreviation],
+    );
+  if (rows.length > 0) {
+    throw new Error("Customer abbreviation is already in use");
+  }
+}
+
 export const createCustomer = (data: CreateCustomerRequest): Customer => {
   const db = getDatabase();
   const customerId = generateUUID();
@@ -94,12 +116,16 @@ export const createCustomer = (data: CreateCustomerRequest): Customer => {
   const city = toNullable((data as { city?: string }).city);
   const postal = toNullable((data as { postalCode?: string }).postalCode);
   const taxId = toNullable(data.taxId);
+  const customerAbbreviation = normalizeCustomerAbbreviation(
+    data.customerAbbreviation,
+  );
+  ensureUniqueCustomerAbbreviation(db, customerAbbreviation);
 
   try {
     db.query(
       `
-      INSERT INTO customers (id, name, contact_name, email, phone, address, country_code, tax_id, created_at, city, postal_code, customer_number)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO customers (id, name, contact_name, email, phone, address, country_code, tax_id, created_at, city, postal_code, customer_number, customer_abbreviation)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
       [
         customerId,
@@ -114,9 +140,12 @@ export const createCustomer = (data: CreateCustomerRequest): Customer => {
         city,
         postal,
         customerNumber,
+        customerAbbreviation,
       ],
     );
-  } catch (_e) {
+  } catch (error) {
+    // Do not silently discard a requested abbreviation on a constraint error.
+    if (customerAbbreviation) throw error;
     // fallback older schema
     try {
       db.query(
@@ -162,6 +191,7 @@ export const createCustomer = (data: CreateCustomerRequest): Customer => {
     city: city ?? undefined,
     postalCode: postal ?? undefined,
     customerNumber,
+    customerAbbreviation: customerAbbreviation ?? undefined,
   };
 };
 
@@ -176,8 +206,9 @@ export const updateCustomer = (
 
   const next = {
     name: data.name ?? existing.name,
-    contactName:
-      data.contactName === undefined ? existing.contactName : undefined,
+    contactName: data.contactName === undefined
+      ? existing.contactName
+      : undefined,
     email: data.email === undefined ? existing.email : undefined,
     phone: data.phone === undefined ? existing.phone : undefined,
     address: data.address === undefined ? existing.address : undefined,
@@ -185,44 +216,40 @@ export const updateCustomer = (
   } as Partial<Customer>;
 
   // If provided, coerce empty to NULL
-  const contactName =
-    data.contactName !== undefined
-      ? toNullable(data.contactName)
-      : (existing.contactName ?? null);
-  const email =
-    data.email !== undefined
-      ? toNullable(data.email)
-      : (existing.email ?? null);
-  const phone =
-    data.phone !== undefined
-      ? toNullable(data.phone)
-      : (existing.phone ?? null);
-  const address =
-    data.address !== undefined
-      ? toNullable(data.address)
-      : (existing.address ?? null);
-  const countryCode =
-    data.countryCode !== undefined
-      ? toNullable(data.countryCode)
-      : (existing.countryCode ?? null);
-  const taxId =
-    data.taxId !== undefined
-      ? toNullable(data.taxId)
-      : (existing.taxId ?? null);
-  const city =
-    (data as { city?: string }).city !== undefined
-      ? toNullable((data as { city?: string }).city)
-      : (existing.city ?? null);
-  const postal =
-    (data as { postalCode?: string }).postalCode !== undefined
-      ? toNullable((data as { postalCode?: string }).postalCode)
-      : (existing.postalCode ?? null);
+  const contactName = data.contactName !== undefined
+    ? toNullable(data.contactName)
+    : (existing.contactName ?? null);
+  const email = data.email !== undefined
+    ? toNullable(data.email)
+    : (existing.email ?? null);
+  const phone = data.phone !== undefined
+    ? toNullable(data.phone)
+    : (existing.phone ?? null);
+  const address = data.address !== undefined
+    ? toNullable(data.address)
+    : (existing.address ?? null);
+  const countryCode = data.countryCode !== undefined
+    ? toNullable(data.countryCode)
+    : (existing.countryCode ?? null);
+  const taxId = data.taxId !== undefined
+    ? toNullable(data.taxId)
+    : (existing.taxId ?? null);
+  const city = (data as { city?: string }).city !== undefined
+    ? toNullable((data as { city?: string }).city)
+    : (existing.city ?? null);
+  const postal = (data as { postalCode?: string }).postalCode !== undefined
+    ? toNullable((data as { postalCode?: string }).postalCode)
+    : (existing.postalCode ?? null);
+  const customerAbbreviation = data.customerAbbreviation !== undefined
+    ? normalizeCustomerAbbreviation(data.customerAbbreviation)
+    : (existing.customerAbbreviation ?? null);
+  ensureUniqueCustomerAbbreviation(db, customerAbbreviation, id);
 
   try {
     db.query(
       `
       UPDATE customers SET
-        name = ?, contact_name = ?, email = ?, phone = ?, address = ?, country_code = ?, tax_id = ?, city = ?, postal_code = ?
+        name = ?, contact_name = ?, email = ?, phone = ?, address = ?, country_code = ?, tax_id = ?, city = ?, postal_code = ?, customer_abbreviation = ?
       WHERE id = ?
     `,
       [
@@ -235,10 +262,13 @@ export const updateCustomer = (
         taxId,
         city,
         postal,
+        customerAbbreviation,
         id,
       ],
     );
-  } catch (_e) {
+  } catch (error) {
+    // Do not silently discard a requested abbreviation on a constraint error.
+    if (customerAbbreviation) throw error;
     try {
       db.query(
         `

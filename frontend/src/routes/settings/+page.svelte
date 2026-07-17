@@ -610,6 +610,7 @@
                   <code>{"{SEQ}"}</code> (sequential, recommended),
                   <code>{"{CSEQ}"}</code> (sequential per customer),
                   <code>{"{CNUM}"}</code> (customer's own number),
+                  <code>{"{CUST}"}</code> (customer abbreviation),
                   <code>{"{YYYY}"}</code>, <code>{"{YY}"}</code>,
                   <code>{"{MM}"}</code>, <code>{"{DD}"}</code>,
                   <code>{"{DATE}"}</code>, <code>{"{RAND4}"}</code>

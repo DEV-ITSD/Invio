@@ -9,7 +9,14 @@ export async function backendGet(path: string, authHeader: string) {
   const res = await fetch(`${BACKEND_URL}${path}`, {
     headers: { Authorization: authHeader },
   });
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  if (!res.ok) {
+    let msg = `${res.status} ${res.statusText}`;
+    try {
+      const errBody = await res.json();
+      if (errBody.error) msg = errBody.error;
+    } catch (_e) {}
+    throw new Error(msg);
+  }
   return await res.json();
 }
 

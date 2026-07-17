@@ -19,7 +19,7 @@ INSERT OR IGNORE INTO settings (key, value) VALUES
   ('paymentTerms', 'Due in 30 days'),
   ('defaultNotes', 'Thank you for your business!'),
   ('postalCityFormat', 'auto'),
-  -- Optional default invoice number pattern (tokens: {YYYY} {YY} {MM} {DD} {DATE} {RAND4})
+  -- Optional default invoice number pattern (tokens: {SEQ} {CSEQ} {CNUM} {CUST} {YYYY} {YY} {MM} {DD} {DATE} {RAND4})
   ('invoiceNumberPattern', ''),
   ('invoiceNumberingEnabled', 'true'),
   ('allowProtectedInvoiceChanges', 'false'),
@@ -40,8 +40,13 @@ CREATE TABLE customers (
   address TEXT,
   country_code TEXT,
   tax_id TEXT,
+  customer_abbreviation TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_abbreviation_unique
+  ON customers(customer_abbreviation COLLATE NOCASE)
+  WHERE customer_abbreviation IS NOT NULL;
 
 -- Enhanced invoices table
 CREATE TABLE invoices (

@@ -60,6 +60,10 @@
         <div class="font-medium">{c.name || "-"}</div>
       </div>
       <div>
+        <div class="mb-1 text-sm opacity-70">{t("Customer Abbreviation")}</div>
+        <div class="font-medium">{c.customerAbbreviation || "-"}</div>
+      </div>
+      <div>
         <div class="mb-1 text-sm opacity-70">{t("Contact Name")}</div>
         <div class="font-medium">{c.contactName || "-"}</div>
       </div>

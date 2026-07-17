@@ -66,6 +66,8 @@
   "Currency": "Valuta",
   "Custom tax": "Aangepaste belasting",
   "Customer": "Klant",
+  "Customer Abbreviation": "Klantafkorting",
+  "Customer abbreviation help": "1 tot 3 letters of cijfers; gebruikt door de tijdelijke aanduiding {CUST} voor factuurnummers",
   "Customer Has Associated Invoices": "Klant heeft gekoppelde facturen",
   "Customer has invoices warning": "Deze klant heeft een of meer facturen. Je moet deze facturen eerst verwijderen voordat je de klant kunt verwijderen.",
   "Customer name": "Klantnaam",

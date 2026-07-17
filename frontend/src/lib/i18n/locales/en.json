@@ -51,6 +51,8 @@
   "Ctrl/Cmd+Enter to add": "Ctrl/Cmd+Enter to add",
   "Currency": "Currency",
   "Customer": "Customer",
+  "Customer Abbreviation": "Customer Abbreviation",
+  "Customer abbreviation help": "1 to 3 letters or numbers; used by the {CUST} invoice numbering placeholder",
   "Customer data hidden": "Customer data hidden",
   "Customers": "Customers",
   "Dark": "Dark",

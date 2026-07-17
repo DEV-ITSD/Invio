@@ -105,8 +105,8 @@ function calculatePerLineTotals(
     const gross = lineGrosses[i] || 0;
     const afterDiscount = Math.max(0, gross - (lineDiscounts[i] || 0));
     const taxes = items[i].taxes || [];
-    const rateSum =
-      taxes.reduce((s, t) => s + (Number(t.percent) || 0), 0) / 100;
+    const rateSum = taxes.reduce((s, t) => s + (Number(t.percent) || 0), 0) /
+      100;
 
     let net = afterDiscount;
     if (pricesIncludeTax && rateSum > 0) {
@@ -246,22 +246,18 @@ export const createInvoice = (
       throw new Error("Invoice number already exists");
     }
   } else {
-    // If advanced numbering pattern with {SEQ}, {CSEQ}, or {CNUM} is active, allocate real number now; else draft placeholder
-    try {
-      const rows = db.query(
-        "SELECT value FROM settings WHERE key = 'invoiceNumberPattern' LIMIT 1",
-      );
-      if (rows.length > 0) {
-        const pattern = String((rows[0] as unknown[])[0] || "").trim();
-        if (pattern && /\{(C?SEQ|CNUM)\}/.test(pattern)) {
-          invoiceNumber = getNextInvoiceNumber(data.customerId);
-        } else {
-          invoiceNumber = generateDraftInvoiceNumber();
-        }
+    // Customer-aware patterns must be resolved while the selected customer is available.
+    const rows = db.query(
+      "SELECT value FROM settings WHERE key = 'invoiceNumberPattern' LIMIT 1",
+    );
+    if (rows.length > 0) {
+      const pattern = String((rows[0] as unknown[])[0] || "").trim();
+      if (pattern && /\{(C?SEQ|CNUM|CUST)\}/.test(pattern)) {
+        invoiceNumber = getNextInvoiceNumber(data.customerId);
       } else {
         invoiceNumber = generateDraftInvoiceNumber();
       }
-    } catch (_e) {
+    } else {
       invoiceNumber = generateDraftInvoiceNumber();
     }
   }
@@ -272,13 +268,12 @@ export const createInvoice = (
   // Determine tax behavior defaults
   const defaultPricesIncludeTax =
     String(settings.defaultPricesIncludeTax || "false").toLowerCase() ===
-    "true";
+      "true";
   const defaultRoundingMode = String(settings.defaultRoundingMode || "line");
   const defaultTaxRate = Number(settings.defaultTaxRate || 0) || 0;
 
   // Determine if per-line taxes are used
-  const hasPerLineTaxes =
-    Array.isArray(data.items) &&
+  const hasPerLineTaxes = Array.isArray(data.items) &&
     data.items.some(
       (i) =>
         Array.isArray((i as { taxes?: LineTaxInput[] }).taxes) &&
@@ -319,8 +314,8 @@ export const createInvoice = (
 
   // Get default settings for currency and payment terms
   const currency = data.currency || settings.currency || "USD";
-  const paymentTerms =
-    data.paymentTerms || settings.paymentTerms || "Due in 30 days";
+  const paymentTerms = data.paymentTerms || settings.paymentTerms ||
+    "Due in 30 days";
 
   const pricesIncludeTax = data.pricesIncludeTax ?? defaultPricesIncludeTax;
   const roundingMode = data.roundingMode || defaultRoundingMode;
@@ -475,17 +470,16 @@ export const createInvoice = (
   } else {
     const rawTaxDefId = (data as { taxDefinitionId?: string | null })
       .taxDefinitionId;
-    const taxDefinitionId =
-      typeof rawTaxDefId === "string" ? rawTaxDefId.trim() : "";
+    const taxDefinitionId = typeof rawTaxDefId === "string"
+      ? rawTaxDefId.trim()
+      : "";
     if (taxDefinitionId) {
       const r2 = (n: number) => Math.round(n * 100) / 100;
       const percent = invoice.taxRate || 0;
       const rate = Math.max(0, Number(percent) || 0) / 100;
       const afterDiscount = r2(invoice.subtotal - invoice.discountAmount);
       const taxable = pricesIncludeTax
-        ? rate > 0
-          ? r2(afterDiscount / (1 + rate))
-          : afterDiscount
+        ? rate > 0 ? r2(afterDiscount / (1 + rate)) : afterDiscount
         : afterDiscount;
       db.query(
         `INSERT INTO invoice_taxes (id, invoice_id, tax_definition_id, percent, taxable_amount, tax_amount, created_at)
@@ -513,17 +507,16 @@ export const createInvoice = (
     ...invoice,
     customer,
     items,
-    taxes:
-      hasPerLineTaxes && perLineCalc
-        ? perLineCalc.summary.map((s) => ({
-            id: "",
-            invoiceId: invoiceId,
-            taxDefinitionId: undefined,
-            percent: s.percent,
-            taxableAmount: s.taxable,
-            taxAmount: s.amount,
-          }))
-        : undefined,
+    taxes: hasPerLineTaxes && perLineCalc
+      ? perLineCalc.summary.map((s) => ({
+        id: "",
+        invoiceId: invoiceId,
+        taxDefinitionId: undefined,
+        percent: s.percent,
+        taxableAmount: s.taxable,
+        taxAmount: s.amount,
+      }))
+      : undefined,
   };
 };
 
@@ -898,8 +891,8 @@ export const updateInvoice = async (
         data.dueDate === null || data.dueDate === ""
           ? null
           : data.dueDate
-            ? new Date(data.dueDate)
-            : existing.dueDate,
+          ? new Date(data.dueDate)
+          : existing.dueDate,
         data.currency ?? existing.currency,
         data.status ?? existing.status,
         totals.subtotal,
@@ -912,9 +905,7 @@ export const updateInvoice = async (
         normalizedNotes !== undefined ? normalizedNotes : existing.notes,
         updatedAt,
         typeof data.pricesIncludeTax === "boolean"
-          ? data.pricesIncludeTax
-            ? 1
-            : 0
+          ? data.pricesIncludeTax ? 1 : 0
           : null,
         data.roundingMode ?? null,
         nextInvoiceNumber ?? null,
@@ -1050,13 +1041,14 @@ export const updateInvoice = async (
       if (data.items || hasTaxDefinitionIdInRequest) {
         const rawTaxDefId = (data as { taxDefinitionId?: string | null })
           .taxDefinitionId;
-        const requested =
-          typeof rawTaxDefId === "string" ? rawTaxDefId.trim() : "";
+        const requested = typeof rawTaxDefId === "string"
+          ? rawTaxDefId.trim()
+          : "";
         const effectiveTaxDefinitionId = hasTaxDefinitionIdInRequest
           ? requested || undefined
           : existing.taxes && existing.taxes.length > 0
-            ? existing.taxes[0].taxDefinitionId
-            : undefined;
+          ? existing.taxes[0].taxDefinitionId
+          : undefined;
 
         // Replace existing invoice_taxes rows (invoice-level mode only)
         db.query("DELETE FROM invoice_taxes WHERE invoice_id = ?", [id]);
@@ -1065,13 +1057,11 @@ export const updateInvoice = async (
           const r2 = (n: number) => Math.round(n * 100) / 100;
           const percent = (data.taxRate ?? existing.taxRate) || 0;
           const rate = Math.max(0, Number(percent) || 0) / 100;
-          const includeTax =
-            data.pricesIncludeTax ?? existing.pricesIncludeTax ?? false;
+          const includeTax = data.pricesIncludeTax ??
+            existing.pricesIncludeTax ?? false;
           const afterDiscount = r2(totals.subtotal - totals.discountAmount);
           const taxable = includeTax
-            ? rate > 0
-              ? r2(afterDiscount / (1 + rate))
-              : afterDiscount
+            ? rate > 0 ? r2(afterDiscount / (1 + rate)) : afterDiscount
             : afterDiscount;
           db.query(
             `INSERT INTO invoice_taxes (id, invoice_id, tax_definition_id, percent, taxable_amount, tax_amount, created_at)
@@ -1391,8 +1381,9 @@ function applyDerivedOverdue<
     inv.status === "paid" ||
     inv.status === "voided" ||
     inv.status === "complete"
-  )
+  ) {
     return inv;
+  }
   if (!inv.dueDate) return inv;
   const today = new Date();
   const dd = new Date(

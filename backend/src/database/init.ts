@@ -4,6 +4,7 @@ import { hashPassword } from "../utils/password.ts";
 import { generateUUID } from "../utils/uuid.ts";
 import { RESOURCE_ACTIONS } from "../types/index.ts";
 import type { Action, Resource } from "../types/index.ts";
+import { createSequencePatternRegex } from "../utils/invoiceNumberPattern.ts";
 
 let db: DB;
 
@@ -161,6 +162,10 @@ function ensureCustomerColumns(database: DB): void {
   addColumnIfMissing(database, "customers", "city", "TEXT");
   addColumnIfMissing(database, "customers", "postal_code", "TEXT");
   addColumnIfMissing(database, "customers", "customer_number", "INTEGER");
+  addColumnIfMissing(database, "customers", "customer_abbreviation", "TEXT");
+  database.execute(
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_abbreviation_unique ON customers(customer_abbreviation COLLATE NOCASE) WHERE customer_abbreviation IS NOT NULL",
+  );
 }
 
 /** Assign a permanent sequential customer_number (by creation order) to any customer missing one. */
@@ -820,6 +825,37 @@ function getCustomerNumber(customerId?: string): number | null {
   }
 }
 
+/** Look up the customer's user-defined abbreviation. */
+function getCustomerAbbreviation(customerId?: string): string | null {
+  if (!customerId) return null;
+  const rows = db.query(
+    "SELECT customer_abbreviation FROM customers WHERE id = ?",
+    [customerId],
+  ) as unknown[][];
+  if (rows.length === 0 || rows[0][0] == null) return null;
+  return String(rows[0][0]).trim().toUpperCase() || null;
+}
+
+function findMaxPatternSequence(
+  pattern: string,
+  token: "SEQ" | "CSEQ",
+  customerId?: string,
+): number {
+  const rows = customerId
+    ? db.query(
+      "SELECT invoice_number FROM invoices WHERE customer_id = ?",
+      [customerId],
+    )
+    : db.query("SELECT invoice_number FROM invoices");
+  const regex = createSequencePatternRegex(pattern, token);
+  let max = 0;
+  for (const row of rows) {
+    const match = String((row as unknown[])[0] ?? "").match(regex);
+    if (match) max = Math.max(max, Number.parseInt(match[1], 10) || 0);
+  }
+  return max;
+}
+
 /** Expand date/random tokens in an invoice-number pattern. */
 function expandPatternTokens(pattern: string): string {
   const now = new Date();
@@ -845,7 +881,12 @@ export function getNextInvoiceNumber(customerId?: string): string {
     const hasSeq = /\{SEQ\}/.test(cfg.pattern);
     const hasClientSeq = /\{CSEQ\}/.test(cfg.pattern);
     const hasCustomerNum = /\{CNUM\}/.test(cfg.pattern);
-    if (!hasSeq && !hasClientSeq && !hasCustomerNum) return expanded;
+    const hasCustomerAbbreviation = /\{CUST\}/.test(cfg.pattern);
+    if (
+      !hasSeq && !hasClientSeq && !hasCustomerNum && !hasCustomerAbbreviation
+    ) {
+      return expanded;
+    }
 
     let result = expanded;
     // {CNUM} must resolve first: {SEQ}/{CSEQ} scan existing invoice_number
@@ -861,16 +902,27 @@ export function getNextInvoiceNumber(customerId?: string): string {
         custNum != null ? String(custNum).padStart(3, "0") : "",
       );
     }
+    if (hasCustomerAbbreviation) {
+      const abbreviation = getCustomerAbbreviation(customerId);
+      if (customerId && !abbreviation) {
+        throw new Error(
+          "Customer abbreviation is required by the invoice number pattern",
+        );
+      }
+      result = result.replace(/\{CUST\}/g, abbreviation ?? "CUST");
+    }
     if (hasSeq) {
       // {SEQ}: global counter, shared across all customers
-      const prefix = result.split("{SEQ}")[0];
-      const next = findMaxSequence(prefix) + 1;
+      const next = findMaxPatternSequence(cfg.pattern, "SEQ") + 1;
       result = result.replace(/\{SEQ\}/g, String(next).padStart(3, "0"));
     }
     if (hasClientSeq) {
       // {CSEQ}: counter scoped to this customer's own invoices
-      const prefix = result.split("{CSEQ}")[0];
-      const next = findMaxSequence(prefix, customerId) + 1;
+      const next = findMaxPatternSequence(
+        cfg.pattern,
+        "CSEQ",
+        customerId,
+      ) + 1;
       result = result.replace(/\{CSEQ\}/g, String(next).padStart(3, "0"));
     }
     return result;

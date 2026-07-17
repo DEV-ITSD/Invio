@@ -66,6 +66,8 @@
   "Currency": "Währung",
   "Custom tax": "Benutzerdefinierte Steuer",
   "Customer": "Kunde",
+  "Customer Abbreviation": "Kundenkürzel",
+  "Customer abbreviation help": "1 bis 3 Buchstaben oder Ziffern; wird vom Platzhalter {CUST} für Rechnungsnummern verwendet",
   "Customer Has Associated Invoices": "Kunde hat zugehörige Rechnungen",
   "Customer has invoices warning": "Diesem Kunden sind eine oder mehrere Rechnungen zugeordnet. Sie müssen diese Rechnungen zuerst löschen, bevor Sie den Kunden löschen können.",
   "Customer name": "Kundenname",
