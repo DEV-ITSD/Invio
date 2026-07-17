@@ -22,6 +22,8 @@ curl -fsSL https://raw.githubusercontent.com/DEV-ITSD/Invio/main/umbrel-mcp/inst
   | sudo bash -s -- tunnel_0123456789abcdef0123456789abcdef
 ```
 
+For a reproducible installation, use a 40-character commit SHA for both the installer URL and the optional second installer argument. The installer will then pull the matching `sha-<commit>` image tag instead of `latest`.
+
 The installer stores secrets below `/home/umbrel/umbrel/app-data/invio-mcp/secrets` with root-only permissions. It downloads the public `ghcr.io/dev-itsd/invio-umbrel-mcp` image, falling back to a local build only if the pull fails. It publishes no host ports. Both services restart automatically unless explicitly stopped.
 
 ## Security boundaries
