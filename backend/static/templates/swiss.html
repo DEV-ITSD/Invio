@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="{{locale}}">
+  <head>
+    <meta charset="UTF-8" />
+    <title>{{labels.invoiceTitle}} {{invoiceNumber}}</title>
+    <style>
+      :root {
+        --accent: {{highlightColor || "#d52b1e"}};
+        --accent-soft: {{highlightColorLight || "#fdf0ef"}};
+        --ink: #172033;
+        --muted: #667085;
+        --rule: #dfe3e8;
+        --surface: #f7f8fa;
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      @page { size: A4; margin: 0; }
+
+      body {
+        background: #fff;
+        color: var(--ink);
+        font-family: "Liberation Sans", Arial, sans-serif;
+        font-size: 11px;
+        line-height: 1.55;
+      }
+
+      .page { padding: 12mm 14mm 10mm; }
+      .accent-line { height: 3px; background: var(--accent); }
+
+      .header {
+        display: table;
+        width: 100%;
+        margin-bottom: 22px;
+        padding-bottom: 18px;
+        border-bottom: 1px solid var(--rule);
+      }
+      .brand, .invoice-meta { display: table-cell; vertical-align: top; }
+      .brand { width: 58%; padding-left: 12px; border-left: 3px solid var(--accent); }
+      .invoice-meta { text-align: right; }
+      .logo { display: block; max-width: 150px; max-height: 36px; margin-bottom: 9px; object-fit: contain; }
+      .company-name { font-weight: 800; letter-spacing: .01em; margin-bottom: 4px; }
+      .company-details, .address-details, .footer-value { color: var(--muted); }
+      .company-details span, .address-details span { display: block; }
+
+      .invoice-title {
+        color: var(--accent);
+        font-size: 24px;
+        font-weight: 800;
+        letter-spacing: -.03em;
+        line-height: 1;
+        margin-bottom: 12px;
+      }
+      .meta-table { display: table; margin-left: auto; border-spacing: 0 3px; }
+      .meta-row { display: table-row; }
+      .meta-label, .meta-value { display: table-cell; white-space: nowrap; }
+      .meta-label {
+        color: var(--muted);
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: .08em;
+        padding-right: 12px;
+        text-transform: uppercase;
+      }
+      .meta-value { font-weight: 700; }
+      .status {
+        display: inline-block;
+        margin-top: 9px;
+        padding: 3px 9px;
+        border: 1px solid var(--accent);
+        border-radius: 99px;
+        color: var(--accent);
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+      }
+
+      .address-grid { display: table; width: 100%; margin-bottom: 22px; }
+      .address-card { display: table-cell; width: 50%; vertical-align: top; }
+      .eyebrow {
+        color: var(--accent);
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: .1em;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+      }
+      .customer-name { font-weight: 800; margin-bottom: 3px; }
+
+      .items { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+      .items thead { background: var(--surface); border-top: 2px solid var(--accent); border-bottom: 1px solid var(--rule); }
+      .items th {
+        color: var(--muted);
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: .07em;
+        padding: 7px 8px;
+        text-align: left;
+        text-transform: uppercase;
+      }
+      .items td { padding: 8px; vertical-align: top; border-bottom: 1px solid var(--rule); }
+      .items tbody tr:last-child td { border-bottom: 2px solid var(--ink); }
+      .description { font-weight: 700; }
+      .item-note { color: var(--muted); font-size: 9px; margin-top: 2px; }
+      .right { text-align: right !important; }
+      .number { white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+      .totals-layout { display: table; width: 100%; margin-bottom: 22px; }
+      .totals-space, .totals { display: table-cell; width: 50%; vertical-align: top; }
+      .totals { padding-left: 26px; }
+      .total-row { display: table; width: 100%; border-bottom: 1px solid var(--rule); }
+      .total-inner { display: table-row; }
+      .total-label, .total-value { display: table-cell; padding: 6px 0; }
+      .total-label { color: var(--muted); }
+      .total-value { text-align: right; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+      .grand { background: var(--accent-soft); border-bottom: 0; border-left: 3px solid var(--accent); }
+      .grand .total-label, .grand .total-value { color: var(--ink); font-weight: 800; padding: 9px 10px; }
+      .grand .total-value { color: var(--accent); }
+      .tax-summary { padding: 7px 0; }
+      .tax-summary table { width: 100%; border-collapse: collapse; }
+      .tax-summary th, .tax-summary td { padding: 2px 0; font-size: 9px; text-align: left; }
+      .tax-summary th { color: var(--muted); font-weight: 700; }
+      .tax-summary th:not(:first-child), .tax-summary td:not(:first-child) { text-align: right; }
+
+      .notes { margin-bottom: 20px; }
+      .notes-body { background: var(--surface); border-left: 3px solid var(--accent); padding: 9px 11px; color: var(--muted); }
+
+      .footer { display: table; width: 100%; padding-top: 14px; border-top: 1px solid var(--rule); }
+      .footer-column { display: table-cell; vertical-align: top; padding-right: 22px; }
+      .footer-value { white-space: pre-line; }
+
+      @media print {
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        tr, td, th, .totals-layout, .notes, .footer { page-break-inside: avoid !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="accent-line"></div>
+    <div class="page">
+      <div class="header">
+        <div class="brand">
+          {{#logoUrl}}<img
+            class="logo"
+            src="{{logoUrl}}"
+            alt="{{companyName}}"
+          />{{/logoUrl}}
+          <div class="company-name">{{companyName}}</div>
+          <div class="company-details">
+            {{#companyAddress}}<span>{{{companyAddress}}}</span>{{/companyAddress}}
+            {{#companyPostalCity}}<span>{{companyPostalCity}}</span>{{/companyPostalCity}}
+            {{#companyEmail}}<span>{{companyEmail}}</span>{{/companyEmail}}
+            {{#companyPhone}}<span>{{companyPhone}}</span>{{/companyPhone}}
+            {{#companyTaxId}}<span>{{labels.taxIdLabel}}: {{companyTaxId}}</span
+            >{{/companyTaxId}}
+          </div>
+        </div>
+        <div class="invoice-meta">
+          <div class="invoice-title">{{labels.invoiceTitle}}</div>
+          <div class="meta-table">
+            <div class="meta-row">
+              <span class="meta-label">{{labels.invoiceNumberShortLabel}}</span
+              ><span class="meta-value">{{invoiceNumber}}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">{{labels.invoiceDateLabel}}</span
+              ><span class="meta-value">{{issueDate}}</span>
+            </div>
+            {{#dueDate}}
+            <div class="meta-row">
+              <span class="meta-label">{{labels.dueDateLabel}}</span
+              ><span class="meta-value">{{dueDate}}</span>
+            </div>
+            {{/dueDate}}
+          </div>
+          <span class="status">{{status}}</span>
+        </div>
+      </div>
+
+      <div class="address-grid">
+        <div class="address-card">
+          <div class="eyebrow">{{labels.billToHeading}}</div>
+          <div class="customer-name">{{customerName}}</div>
+          <div class="address-details">
+            {{#customerContactName}}<span>{{customerContactName}}</span>{{/customerContactName}}
+            {{#customerEmail}}<span>{{customerEmail}}</span>{{/customerEmail}}
+            {{#customerPhone}}<span>{{customerPhone}}</span>{{/customerPhone}}
+            {{#customerAddress}}<span>{{{customerAddress}}}</span>{{/customerAddress}}
+            {{#customerPostalCity}}<span>{{customerPostalCity}}</span>{{/customerPostalCity}}
+            {{#customerCountryCode}}<span>{{customerCountryCode}}</span>{{/customerCountryCode}}
+            {{#customerTaxId}}<span
+              >{{labels.taxIdLabel}}: {{customerTaxId}}</span
+            >{{/customerTaxId}}
+          </div>
+        </div>
+      </div>
+
+      <table class="items">
+        <thead>
+          <tr>
+            <th>{{labels.itemHeaderDescription}}</th>
+            <th class="right">{{labels.itemHeaderQuantityShort}}</th>
+            {{#hasItemUnits}}
+            <th class="right">{{labels.itemHeaderUnit}}</th>
+            {{/hasItemUnits}}
+            <th class="right">{{labels.itemHeaderUnitPrice}}</th>
+            <th class="right">{{labels.itemHeaderAmount}}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#items}}
+          <tr>
+            <td>
+              <div class="description">{{description}}</div>
+              {{#notes}}
+              <div class="item-note">{{notes}}</div>
+              {{/notes}}
+            </td>
+            <td class="right number">{{quantity}}</td>
+            {{#hasItemUnits}}
+            <td class="right">{{unit}}</td>
+            {{/hasItemUnits}}
+            <td class="right number">{{unitPrice}}</td>
+            <td class="right number">{{lineTotal}}</td>
+          </tr>
+          {{/items}}
+        </tbody>
+      </table>
+
+      <div class="totals-layout">
+        <div class="totals-space"></div>
+        <div class="totals">
+          <div class="total-row">
+            <div class="total-inner">
+              <span class="total-label">{{labels.subtotalLabel}}</span
+              ><span class="total-value">{{subtotal}}</span>
+            </div>
+          </div>
+          {{#hasDiscount}}
+          <div class="total-row">
+            <div class="total-inner">
+              <span class="total-label"
+                >{{labels.discountLabel}}{{#discountPercentage}}
+                ({{discountPercentage}}%){{/discountPercentage}}</span
+              ><span class="total-value">−{{discountAmount}}</span>
+            </div>
+          </div>
+          {{/hasDiscount}} {{#hasTax}}
+          <div class="total-row">
+            <div class="total-inner">
+              <span class="total-label">{{labels.taxLabel}} ({{taxRate}}%)</span
+              ><span class="total-value">{{taxAmount}}</span>
+            </div>
+          </div>
+          {{/hasTax}} {{#hasTaxSummary}}
+          <div class="tax-summary">
+            <div class="eyebrow">{{labels.taxSummaryHeading}}</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>{{labels.taxLabel}}</th>
+                  <th>{{labels.taxableLabel}}</th>
+                  <th>{{labels.taxAmountLabel}}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#taxSummary}}
+                <tr>
+                  <td>{{label}}</td>
+                  <td>{{taxable}}</td>
+                  <td>{{amount}}</td>
+                </tr>
+                {{/taxSummary}}
+              </tbody>
+            </table>
+          </div>
+          {{/hasTaxSummary}}
+          <div class="total-row grand">
+            <div class="total-inner">
+              <span class="total-label">{{labels.totalLabel}}</span
+              ><span class="total-value">{{total}}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {{#notes}}
+      <div class="notes">
+        <div class="eyebrow">{{labels.notesHeading}}</div>
+        <div class="notes-body">{{notes}}</div>
+      </div>
+      {{/notes}}
+
+      <div class="footer">
+        {{#paymentTerms}}
+        <div class="footer-column">
+          <div class="eyebrow">{{labels.paymentTermsLabel}}</div>
+          <div class="footer-value">{{paymentTerms}}</div>
+        </div>
+        {{/paymentTerms}} {{#paymentMethods}}
+        <div class="footer-column">
+          <div class="eyebrow">{{labels.paymentMethodsLabel}}</div>
+          <div class="footer-value">{{paymentMethods}}</div>
+        </div>
+        {{/paymentMethods}} {{#bankAccount}}
+        <div class="footer-column">
+          <div class="eyebrow">{{labels.bankAccountLabel}}</div>
+          <div class="footer-value">{{bankAccount}}</div>
+        </div>
+        {{/bankAccount}}
+      </div>
+    </div>
+  </body>
+</html>
