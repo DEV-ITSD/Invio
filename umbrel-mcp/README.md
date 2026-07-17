@@ -22,7 +22,7 @@ curl -fsSL https://raw.githubusercontent.com/DEV-ITSD/Invio/main/umbrel-mcp/inst
   | sudo bash -s -- tunnel_0123456789abcdef0123456789abcdef
 ```
 
-The installer stores secrets below `/home/umbrel/umbrel/app-data/invio-mcp/secrets` with root-only permissions. It publishes no host ports. Both services restart automatically unless explicitly stopped.
+The installer stores secrets below `/home/umbrel/umbrel/app-data/invio-mcp/secrets` with root-only permissions. It downloads the public `ghcr.io/dev-itsd/invio-umbrel-mcp` image, falling back to a local build only if the pull fails. It publishes no host ports. Both services restart automatically unless explicitly stopped.
 
 ## Security boundaries
 
@@ -39,4 +39,3 @@ The installer stores secrets below `/home/umbrel/umbrel/app-data/invio-mcp/secre
 npm ci
 npm test
 ```
-

@@ -75,9 +75,12 @@ EOF
 chmod 600 "${SOURCE_DIR}/.env"
 
 cd "${SOURCE_DIR}"
-echo "Building the MCP image on Umbrel. This can take several minutes the first time..."
-docker compose --env-file .env -f compose.yml build --pull
-docker compose --env-file .env -f compose.yml up -d
+echo "Downloading the published MCP image..."
+if ! docker compose --env-file .env -f compose.yml pull; then
+  echo "The published image could not be pulled; building it locally as a fallback..."
+  docker compose --env-file .env -f compose.yml build --pull
+fi
+docker compose --env-file .env -f compose.yml up -d --no-build
 
 echo "Waiting for the MCP service and OpenAI tunnel..."
 deadline=$((SECONDS + 180))
