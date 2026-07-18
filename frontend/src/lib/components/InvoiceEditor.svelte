@@ -23,6 +23,7 @@
     invoiceNumber: initInvoice?.invoiceNumber ?? initNextInvoiceNumber,
     currency: initInvoice?.currency || initSettings.currency || "EUR",
     status: initInvoice?.status || "draft",
+    documentType: initInvoice?.documentType || "invoice",
     templateId: initInvoice?.templateId || initSettings.templateId || "",
     templateVersionId: initInvoice?.templateVersionId || initSettings.templateVersionId || "",
     issueDate: initInvoice?.issueDate ? new Date(initInvoice.issueDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
@@ -272,7 +273,7 @@
     <div class="alert alert-error">{error}</div>
   {/if}
 
-  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
     <label class="form-control">
       <div class="label">
         <span class="label-text">{t("Customer")} <span class="text-error">*</span></span>
@@ -290,6 +291,16 @@
         <span class="label-text">{t("Invoice Number")}</span>
       </div>
       <input type="text" class="input input-bordered w-full" placeholder={t("e.g. INV-2025-001")} bind:value={form.invoiceNumber} oninput={() => (invoiceNumberTouched = true)} />
+    </label>
+
+    <label class="form-control">
+      <div class="label">
+        <span class="label-text">{t("Document Type")}</span>
+      </div>
+      <select class="select select-bordered w-full" bind:value={form.documentType}>
+        <option value="invoice">{String(initSettings.invoiceDocumentTitle || "").trim() || t("Invoice")}</option>
+        <option value="receipt">{String(initSettings.receiptDocumentTitle || "").trim() || t("Receipt")}</option>
+      </select>
     </label>
 
     <label class="form-control">
