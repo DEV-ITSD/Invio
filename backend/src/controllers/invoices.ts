@@ -5,6 +5,7 @@ import {
   getNextInvoiceNumber,
 } from "../database/init.ts";
 import { getSetting } from "./settings.ts";
+import { resolveTemplateSelection } from "./templates.ts";
 import {
   CreateInvoiceRequest,
   Invoice,
@@ -319,6 +320,10 @@ export const createInvoice = (
 
   const pricesIncludeTax = data.pricesIncludeTax ?? defaultPricesIncludeTax;
   const roundingMode = data.roundingMode || defaultRoundingMode;
+  const templateSelection = resolveTemplateSelection(
+    data.templateId,
+    data.templateVersionId,
+  );
 
   const invoice: Invoice = {
     id: invoiceId,
@@ -328,6 +333,9 @@ export const createInvoice = (
     dueDate,
     currency,
     status: data.status || "draft",
+    templateId: templateSelection.template.id,
+    templateVersionId: templateSelection.version.id,
+    templateHtmlSnapshot: templateSelection.html,
 
     // Totals
     subtotal: totals.subtotal,
@@ -356,8 +364,9 @@ export const createInvoice = (
       id, invoice_number, customer_id, issue_date, due_date, currency, status,
       subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
       payment_terms, notes, share_token, created_at, updated_at,
-      prices_include_tax, rounding_mode
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      prices_include_tax, rounding_mode, template_id, template_version_id,
+      template_html_snapshot
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       invoice.id,
       invoice.invoiceNumber,
@@ -379,6 +388,9 @@ export const createInvoice = (
       invoice.updatedAt,
       pricesIncludeTax ? 1 : 0,
       roundingMode,
+      invoice.templateId,
+      invoice.templateVersionId,
+      invoice.templateHtmlSnapshot,
     ],
   );
   recordStatusChange(db, invoiceId, invoice.status || "draft");
@@ -526,7 +538,8 @@ export const getInvoices = (): Invoice[] => {
     SELECT id, invoice_number, customer_id, issue_date, due_date, currency, status,
            subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
            payment_terms, notes, share_token, created_at, updated_at,
-           prices_include_tax, rounding_mode
+           prices_include_tax, rounding_mode, template_id, template_version_id,
+           template_html_snapshot
     FROM invoices
     ORDER BY created_at DESC
   `);
@@ -541,7 +554,8 @@ export const getInvoiceById = (id: string): InvoiceWithDetails | null => {
     SELECT id, invoice_number, customer_id, issue_date, due_date, currency, status,
            subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
            payment_terms, notes, share_token, created_at, updated_at,
-           prices_include_tax, rounding_mode
+           prices_include_tax, rounding_mode, template_id, template_version_id,
+           template_html_snapshot
     FROM invoices
     WHERE id = ?
   `,
@@ -646,7 +660,8 @@ export const getInvoiceByShareToken = (
     SELECT id, invoice_number, customer_id, issue_date, due_date, currency, status,
            subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
            payment_terms, notes, share_token, created_at, updated_at,
-           prices_include_tax, rounding_mode
+           prices_include_tax, rounding_mode, template_id, template_version_id,
+           template_html_snapshot
     FROM invoices
     WHERE share_token = ?
   `,
@@ -791,6 +806,8 @@ export const updateInvoice = async (
       "customerId",
       "issueDate",
       "invoiceNumber",
+      "templateId",
+      "templateVersionId",
       "subtotal",
       "total",
     ];
@@ -863,6 +880,13 @@ export const updateInvoice = async (
   }
 
   const updatedAt = new Date();
+  const templateSelection =
+    data.templateId !== undefined || data.templateVersionId !== undefined
+      ? resolveTemplateSelection(
+        data.templateId ?? existing.templateId,
+        data.templateVersionId,
+      )
+      : undefined;
 
   // Normalize notes: treat whitespace-only as empty string so it clears stored notes
   const normalizedNotes = ((): string | undefined => {
@@ -882,7 +906,10 @@ export const updateInvoice = async (
       payment_terms = ?, notes = ?, updated_at = ?,
       prices_include_tax = COALESCE(?, prices_include_tax),
       rounding_mode = COALESCE(?, rounding_mode),
-      invoice_number = COALESCE(?, invoice_number)
+      invoice_number = COALESCE(?, invoice_number),
+      template_id = COALESCE(?, template_id),
+      template_version_id = COALESCE(?, template_version_id),
+      template_html_snapshot = COALESCE(?, template_html_snapshot)
     WHERE id = ?
   `,
       [
@@ -909,6 +936,9 @@ export const updateInvoice = async (
           : null,
         data.roundingMode ?? null,
         nextInvoiceNumber ?? null,
+        templateSelection?.template.id ?? null,
+        templateSelection?.version.id ?? null,
+        templateSelection?.html ?? null,
         id,
       ],
     );
@@ -1129,6 +1159,7 @@ export const duplicateInvoice = async (
   const newId = generateUUID();
   const newShare = generateShareToken();
   const now = new Date();
+  const templateSelection = resolveTemplateSelection();
   // Start as draft with a draft invoice number; copy descriptive fields, totals will be recalculated from items
   const items = original.items || [];
   // Recompute totals to avoid stale numbers
@@ -1146,8 +1177,9 @@ export const duplicateInvoice = async (
       id, invoice_number, customer_id, issue_date, due_date, currency, status,
       subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
       payment_terms, notes, share_token, created_at, updated_at,
-      prices_include_tax, rounding_mode
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      prices_include_tax, rounding_mode, template_id, template_version_id,
+      template_html_snapshot
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
       [
         newId,
@@ -1170,6 +1202,9 @@ export const duplicateInvoice = async (
         now,
         (original as Invoice).pricesIncludeTax ? 1 : 0,
         (original as Invoice).roundingMode || "line",
+        templateSelection.template.id,
+        templateSelection.version.id,
+        templateSelection.html,
       ],
     );
     // Copy items
@@ -1232,6 +1267,9 @@ export const publishInvoice = async (
   if (invoice.status === "draft") {
     const db = getDatabase();
     const now = new Date();
+    const templateSelection = invoice.templateHtmlSnapshot
+      ? undefined
+      : resolveTemplateSelection(invoice.templateId, invoice.templateVersionId);
     let num = invoice.invoiceNumber;
     if (num.startsWith("DRAFT-")) {
       num = getNextInvoiceNumber(invoice.customerId);
@@ -1239,8 +1277,19 @@ export const publishInvoice = async (
     db.execute("BEGIN");
     try {
       db.query(
-        "UPDATE invoices SET status = 'sent', invoice_number = ?, updated_at = ? WHERE id = ?",
-        [num, now, id],
+        `UPDATE invoices SET status = 'sent', invoice_number = ?, updated_at = ?,
+          template_id = COALESCE(template_id, ?),
+          template_version_id = COALESCE(template_version_id, ?),
+          template_html_snapshot = COALESCE(template_html_snapshot, ?)
+         WHERE id = ?`,
+        [
+          num,
+          now,
+          templateSelection?.template.id ?? null,
+          templateSelection?.version.id ?? null,
+          templateSelection?.html ?? null,
+          id,
+        ],
       );
       recordStatusChange(db, id, "sent");
       db.execute("COMMIT");
@@ -1370,6 +1419,9 @@ function mapRowToInvoice(row: unknown[]): Invoice {
     updatedAt: new Date(row[17] as string),
     pricesIncludeTax: Boolean(row[18] as number),
     roundingMode: (row[19] as string) || "line",
+    templateId: row[20] ? String(row[20]) : undefined,
+    templateVersionId: row[21] ? String(row[21]) : undefined,
+    templateHtmlSnapshot: row[22] ? String(row[22]) : undefined,
   };
 }
 
