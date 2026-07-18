@@ -41,6 +41,7 @@ CREATE TABLE customers (
   country_code TEXT,
   tax_id TEXT,
   customer_abbreviation TEXT,
+  pdf_name TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
