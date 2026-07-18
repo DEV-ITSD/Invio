@@ -23,6 +23,8 @@
     invoiceNumber: initInvoice?.invoiceNumber ?? initNextInvoiceNumber,
     currency: initInvoice?.currency || initSettings.currency || "EUR",
     status: initInvoice?.status || "draft",
+    templateId: initInvoice?.templateId || initSettings.templateId || "",
+    templateVersionId: initInvoice?.templateVersionId || initSettings.templateVersionId || "",
     issueDate: initInvoice?.issueDate ? new Date(initInvoice.issueDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
     dueDate: initInvoice?.dueDate ? new Date(initInvoice.dueDate).toISOString().slice(0, 10) : "",
     taxMode: initInvoice?.taxMode || "invoice",
@@ -58,6 +60,26 @@
   let customers = $derived(data.customers || []);
   let products = $derived(data.products || []);
   let taxDefinitions = $derived(data.taxDefinitions || []);
+  let templates = $derived(data.templates || []);
+  let selectedTemplate = $derived(templates.find((template: any) => template.id === form.templateId));
+  let templateVersions = $derived(selectedTemplate?.versions || []);
+  let templateLocked = $derived(Boolean(initInvoice && initInvoice.status !== "draft"));
+
+  $effect(() => {
+    if (!form.templateId && templates.length) {
+      const preferred = templates.find((template: any) => template.isDefault) || templates[0];
+      form.templateId = preferred?.id || "";
+    }
+    if (form.templateId && !form.templateVersionId && selectedTemplate) {
+      form.templateVersionId = selectedTemplate.activeVersionId || selectedTemplate.versions?.[0]?.id || "";
+    }
+  });
+
+  function changeTemplate(event: Event) {
+    form.templateId = (event.currentTarget as HTMLSelectElement).value;
+    const template = templates.find((item: any) => item.id === form.templateId);
+    form.templateVersionId = template?.activeVersionId || template?.versions?.[0]?.id || "";
+  }
 
   // Re-preview the next invoice number whenever the customer changes, so
   // customer-scoped patterns ({CSEQ}, {CNUM}) show something representative.
@@ -305,6 +327,25 @@
         <span class="label-text">{t("Due Date")}</span>
       </div>
       <input type="date" class="input input-bordered w-full" bind:value={form.dueDate} />
+    </label>
+
+    <label class="form-control">
+      <div class="label"><span class="label-text">{t("Template")}</span></div>
+      <select class="select select-bordered w-full" value={form.templateId} onchange={changeTemplate} disabled={templateLocked}>
+        {#each templates as template (template.id)}
+          <option value={template.id}>{template.name}</option>
+        {/each}
+      </select>
+    </label>
+
+    <label class="form-control">
+      <div class="label"><span class="label-text">{t("Template version")}</span></div>
+      <select class="select select-bordered w-full" bind:value={form.templateVersionId} disabled={templateLocked || templateVersions.length === 0}>
+        {#each templateVersions as version (version.id)}
+          <option value={version.id}>v{version.versionNumber}{version.id === selectedTemplate?.activeVersionId ? ` · ${t("Active")}` : ""}</option>
+        {/each}
+      </select>
+      {#if templateLocked}<div class="label"><span class="label-text-alt opacity-60">{t("Issued invoices keep their saved template version.")}</span></div>{/if}
     </label>
   </div>
 
