@@ -1,5 +1,6 @@
 {
   "invoiceTitle": "Rechnung",
+  "receiptTitle": "Quittung",
   "invoiceNumberLabel": "Rechnungsnummer",
   "invoiceNumberShortLabel": "Rechnung #",
   "invoiceDateLabel": "Rechnungsdatum",
