@@ -479,6 +479,8 @@
     </div>
     {{/notes}}
 
+    <!-- Invoice-only payment footer -->
+    {{#isInvoice}}
     <div class="footer">
       <div class="footer-grid">
         {{#paymentTerms}}
@@ -499,6 +501,7 @@
         {{/bankAccount}}
       </div>
     </div>
+    {{/isInvoice}}
     <script>
       (function () {
         try {
