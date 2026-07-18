@@ -58,6 +58,9 @@ export interface Invoice {
   locale?: string;
 
   // System fields
+  templateId?: string;
+  templateVersionId?: string;
+  templateHtmlSnapshot?: string;
   shareToken: string;
   createdAt: Date;
   updatedAt: Date;
@@ -95,7 +98,23 @@ export interface Template {
   html: string;
   isDefault: boolean;
   templateType: TemplateType;
+  activeVersionId?: string;
+  activeVersionNumber?: number;
+  versionCount?: number;
   createdAt: Date;
+}
+
+export interface TemplateVersion {
+  id: string;
+  templateId: string;
+  versionNumber: number;
+  html: string;
+  changeDescription?: string;
+  source?: string;
+  isBuiltin: boolean;
+  isArchived: boolean;
+  createdAt: Date;
+  createdBy?: string;
 }
 
 export interface Setting {
@@ -245,6 +264,8 @@ export interface CreateInvoiceRequest {
   dueDate?: string | Date;
   currency?: string;
   status?: "draft" | "sent" | "complete" | "paid" | "overdue" | "voided";
+  templateId?: string;
+  templateVersionId?: string;
 
   // Totals (optional, will be calculated if not provided)
   discountAmount?: number;
