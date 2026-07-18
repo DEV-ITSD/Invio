@@ -14,12 +14,14 @@ export const load: PageServerLoad = async ({ locals }) => {
     taxDefinitionsRes,
     settingsRes,
     nextInvoiceNumberRes,
+    templatesRes,
   ] = await Promise.allSettled([
     backendGet("/api/v1/customers", locals.authHeader),
     backendGet("/api/v1/products", locals.authHeader),
     backendGet("/api/v1/tax-definitions", locals.authHeader),
     backendGet("/api/v1/settings", locals.authHeader),
     backendGet("/api/v1/invoices/next-number", locals.authHeader),
+    backendGet("/api/v1/templates", locals.authHeader),
   ]);
 
   return {
@@ -32,5 +34,6 @@ export const load: PageServerLoad = async ({ locals }) => {
       nextInvoiceNumberRes.status === "fulfilled"
         ? nextInvoiceNumberRes.value?.next || ""
         : "",
+    templates: templatesRes.status === "fulfilled" ? templatesRes.value : [],
   };
 };

@@ -13,14 +13,21 @@ import {
   voidInvoice,
 } from "../controllers/invoices.ts";
 import {
+  activateTemplateVersion,
+  archiveTemplateVersion,
   createTemplate,
+  createTemplateVersion,
   deleteTemplate,
+  deleteTemplateVersion,
   getTemplateById,
   getTemplates,
+  getTemplateVersion,
+  getTemplateVersions,
   installLocalTemplateFromZip,
   installTemplateFromManifest,
   loadTemplateFromFile,
   renderTemplate,
+  restoreTemplateVersion,
   setDefaultTemplate,
 } from "../controllers/templates.ts";
 import {
@@ -69,7 +76,10 @@ import { buildInvoiceHTML, generatePDF } from "../utils/pdf.ts";
 import { isEmailConfigured, sendEmail } from "../utils/email.ts";
 import { generateUBLInvoiceXML } from "../utils/ubl.ts"; // legacy direct import
 import { generateInvoiceXML, listXMLProfiles } from "../utils/xmlProfiles.ts";
-import { availableInvoiceLocales } from "../i18n/translations.ts";
+import {
+  availableInvoiceLocales,
+  getInvoiceLabels,
+} from "../i18n/translations.ts";
 
 import { resetDatabaseFromDemo } from "../database/init.ts";
 import { getNextInvoiceNumber } from "../database/init.ts";
@@ -189,7 +199,9 @@ function deriveLocaleFromCountryCode(countryCode?: string): string | undefined {
       "VC",
       "TT",
     ].includes(code)
-  ) return "en";
+  ) {
+    return "en";
+  }
 
   return undefined;
 }
@@ -750,6 +762,131 @@ adminRoutes.post(
   },
 );
 
+// Version history and editor operations. Editing never overwrites an existing
+// version: every save creates a new immutable revision.
+adminRoutes.get(
+  "/templates/:id/versions",
+  requirePermission("templates", "read"),
+  (c) => {
+    const id = c.req.param("id");
+    if (!getTemplateById(id)) {
+      return c.json({ error: "Template not found" }, 404);
+    }
+    return c.json(getTemplateVersions(id, true));
+  },
+);
+
+adminRoutes.get(
+  "/templates/:id/versions/:versionId",
+  requirePermission("templates", "read"),
+  (c) => {
+    const version = getTemplateVersion(
+      c.req.param("id"),
+      c.req.param("versionId"),
+    );
+    return version
+      ? c.json(version)
+      : c.json({ error: "Template version not found" }, 404);
+  },
+);
+
+adminRoutes.post(
+  "/templates/:id/versions",
+  requirePermission("templates", "update"),
+  async (c) => {
+    try {
+      const data = await c.req.json();
+      const user = getAuthUser(c);
+      const version = createTemplateVersion(c.req.param("id"), {
+        html: String(data.html || ""),
+        changeDescription: data.changeDescription,
+        activate: data.activate !== false,
+        source: "editor",
+        createdBy: user?.username,
+      });
+      return c.json(version, 201);
+    } catch (error) {
+      return c.json(
+        { error: error instanceof Error ? error.message : String(error) },
+        400,
+      );
+    }
+  },
+);
+
+adminRoutes.post(
+  "/templates/:id/versions/:versionId/activate",
+  requirePermission("templates", "update"),
+  (c) => {
+    try {
+      return c.json(
+        activateTemplateVersion(c.req.param("id"), c.req.param("versionId")),
+      );
+    } catch (error) {
+      return c.json(
+        { error: error instanceof Error ? error.message : String(error) },
+        400,
+      );
+    }
+  },
+);
+
+adminRoutes.post(
+  "/templates/:id/versions/:versionId/restore",
+  requirePermission("templates", "update"),
+  (c) => {
+    try {
+      const user = getAuthUser(c);
+      return c.json(
+        restoreTemplateVersion(
+          c.req.param("id"),
+          c.req.param("versionId"),
+          user?.username,
+        ),
+        201,
+      );
+    } catch (error) {
+      return c.json(
+        { error: error instanceof Error ? error.message : String(error) },
+        400,
+      );
+    }
+  },
+);
+
+adminRoutes.post(
+  "/templates/:id/versions/:versionId/archive",
+  requirePermission("templates", "delete"),
+  (c) => {
+    try {
+      return c.json(
+        archiveTemplateVersion(c.req.param("id"), c.req.param("versionId")),
+      );
+    } catch (error) {
+      return c.json(
+        { error: error instanceof Error ? error.message : String(error) },
+        400,
+      );
+    }
+  },
+);
+
+adminRoutes.delete(
+  "/templates/:id/versions/:versionId",
+  requirePermission("templates", "delete"),
+  (c) => {
+    try {
+      deleteTemplateVersion(c.req.param("id"), c.req.param("versionId"));
+      return c.json({ success: true });
+    } catch (error) {
+      return c.json(
+        { error: error instanceof Error ? error.message : String(error) },
+        409,
+      );
+    }
+  },
+);
+
 // Delete a template (disallow removing built-in app templates)
 adminRoutes.delete(
   "/templates/:id",
@@ -772,7 +909,7 @@ adminRoutes.delete(
     try {
       const current = await getSetting("templateId");
       if (current === id) {
-        await setSetting("templateId", "minimalist-clean");
+        setDefaultTemplate("minimalist-clean");
       }
     } catch (_e) {
       // non-fatal
@@ -825,6 +962,8 @@ adminRoutes.post(
       issueDate: "2025-08-26",
       dueDate: "2025-09-25",
       currency: "USD",
+      locale: "en",
+      labels: getInvoiceLabels("en"),
       status: "draft",
       customerName: "John Doe",
       customerEmail: "john@example.com",
@@ -859,7 +998,13 @@ adminRoutes.post(
     };
 
     try {
-      const renderedHtml = renderTemplate(template.html, sampleData);
+      const version = data.versionId
+        ? getTemplateVersion(id, String(data.versionId))
+        : undefined;
+      const renderedHtml = renderTemplate(
+        version?.html || template.html,
+        sampleData,
+      );
       return new Response(renderedHtml, {
         headers: { "Content-Type": "text/html" },
       });
@@ -980,7 +1125,10 @@ adminRoutes.put(
     // If default template changed, reflect in templates table
     if (typeof data.templateId === "string" && data.templateId) {
       try {
-        setDefaultTemplate(String(data.templateId));
+        setDefaultTemplate(
+          String(data.templateId),
+          data.templateVersionId ? String(data.templateVersionId) : undefined,
+        );
       } catch {
         /* ignore */
       }
@@ -1017,7 +1165,10 @@ adminRoutes.patch(
     const settings = await updateSettings(data);
     if (typeof data.templateId === "string" && data.templateId) {
       try {
-        setDefaultTemplate(String(data.templateId));
+        setDefaultTemplate(
+          String(data.templateId),
+          data.templateVersionId ? String(data.templateVersionId) : undefined,
+        );
       } catch {
         /* ignore */
       }
@@ -1724,8 +1875,8 @@ adminRoutes.post(
     try {
       const body = await c.req.json();
       to = Array.isArray(body.to)
-        ? body.to.filter((e: unknown) =>
-          typeof e === "string" && e.includes("@")
+        ? body.to.filter(
+          (e: unknown) => typeof e === "string" && e.includes("@"),
         )
         : [];
       subject = typeof body.subject === "string" ? body.subject.trim() : "";
@@ -1819,10 +1970,13 @@ adminRoutes.post(
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error("Email: PDF generation failed:", msg);
-      return c.json({
-        error: "Failed to generate PDF attachment",
-        details: msg,
-      }, 500);
+      return c.json(
+        {
+          error: "Failed to generate PDF attachment",
+          details: msg,
+        },
+        500,
+      );
     }
 
     // Build email body
@@ -1838,17 +1992,18 @@ adminRoutes.post(
       ? new Date(invoice.dueDate).toISOString().slice(0, 10)
       : null;
     const origin = c.req.header("origin") ||
-      c.req.header("referer")?.replace(/\/$/, "") || "";
+      c.req.header("referer")?.replace(/\/$/, "") ||
+      "";
     const shareLink = invoice.shareToken && origin
       ? `${origin}/public/invoices/${invoice.shareToken}`
       : null;
 
     const messageHtml = message
       ? `<p style="white-space:pre-wrap;">${
-        message.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(
-          />/g,
-          "&gt;",
-        )
+        message
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
       }</p>`
       : "";
     const shareLinkHtml = shareLink
@@ -1884,7 +2039,10 @@ adminRoutes.post(
       dueDate ? `Due date: ${dueDate}` : "",
       `Total: ${total}`,
       shareLink ? `\nView online: ${shareLink}` : "",
-    ].filter((l) => l !== undefined).join("\n").trim();
+    ]
+      .filter((l) => l !== undefined)
+      .join("\n")
+      .trim();
 
     try {
       await sendEmail({

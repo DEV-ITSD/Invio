@@ -35,7 +35,14 @@ export async function backendPost(
     headers,
     body: body ? JSON.stringify(body) : undefined,
   });
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  if (!res.ok) {
+    let msg = `${res.status} ${res.statusText}`;
+    try {
+      const errBody = await res.json();
+      if (errBody.error) msg = errBody.error;
+    } catch (_e) {}
+    throw new Error(msg);
+  }
   return await res.json();
 }
 
@@ -47,7 +54,14 @@ export async function backendDelete(path: string, authHeader: string | null) {
     method: "DELETE",
     headers,
   });
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  if (!res.ok) {
+    let msg = `${res.status} ${res.statusText}`;
+    try {
+      const errBody = await res.json();
+      if (errBody.error) msg = errBody.error;
+    } catch (_e) {}
+    throw new Error(msg);
+  }
   return await res.json();
 }
 

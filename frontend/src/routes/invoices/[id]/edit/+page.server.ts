@@ -14,12 +14,14 @@ export const load: PageServerLoad = async ({ params, locals }) => {
       productsRes,
       taxDefinitionsRes,
       settingsRes,
+      templatesRes,
     ] = await Promise.allSettled([
       backendGet(`/api/v1/invoices/${params.id}`, locals.authHeader),
       backendGet("/api/v1/customers", locals.authHeader),
       backendGet("/api/v1/products", locals.authHeader),
       backendGet("/api/v1/tax-definitions", locals.authHeader),
       backendGet("/api/v1/settings", locals.authHeader),
+      backendGet("/api/v1/templates", locals.authHeader),
     ]);
 
     if (invoiceRes.status !== "fulfilled") {
@@ -37,6 +39,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
       products: productsRes.status === "fulfilled" ? productsRes.value : [],
       taxDefinitions:
         taxDefinitionsRes.status === "fulfilled" ? taxDefinitionsRes.value : [],
+      settings,
+      templates: templatesRes.status === "fulfilled" ? templatesRes.value : [],
       allowProtectedInvoiceChanges:
         String(
           settings.allowProtectedInvoiceChanges || "false",

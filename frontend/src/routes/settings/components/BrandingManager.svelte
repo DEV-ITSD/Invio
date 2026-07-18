@@ -101,6 +101,22 @@
   function selectColor(color: string) {
     settings.highlight = color;
   }
+
+  let selectedTemplate = $derived(templates.find((tmpl: any) => tmpl.id === settings.templateId));
+  let templateVersions = $derived(selectedTemplate?.versions || []);
+
+  $effect(() => {
+    if (selectedTemplate && !settings.templateVersionId) {
+      settings.templateVersionId = selectedTemplate.activeVersionId || selectedTemplate.versions?.[0]?.id || "";
+    }
+  });
+
+  function onTemplateChange(event: Event) {
+    const id = (event.currentTarget as HTMLSelectElement).value;
+    settings.templateId = id;
+    const template = templates.find((tmpl: any) => tmpl.id === id);
+    settings.templateVersionId = template?.activeVersionId || template?.versions?.[0]?.id || "";
+  }
 </script>
 
 <div class="space-y-4">
@@ -108,13 +124,24 @@
 
   <label class="form-control">
     <div class="label"><span class="label-text">{t("Template")}</span></div>
-    <select class="select select-bordered w-full" bind:value={settings.templateId} disabled={!canUpdateSettings}>
+    <select class="select select-bordered w-full" value={settings.templateId || ""} onchange={onTemplateChange} disabled={!canUpdateSettings}>
       <option value="">{t("Default")}</option>
       {#each templates as tmpl (tmpl.id)}
         <option value={tmpl.id}>{tmpl.name}</option>
       {/each}
     </select>
   </label>
+
+  {#if settings.templateId && templateVersions.length > 0}
+    <label class="form-control">
+      <div class="label"><span class="label-text">{t("Template version")}</span></div>
+      <select class="select select-bordered w-full" bind:value={settings.templateVersionId} disabled={!canUpdateSettings}>
+        {#each templateVersions as version (version.id)}
+          <option value={version.id}>v{version.versionNumber}{version.id === selectedTemplate?.activeVersionId ? ` · ${t("Active")}` : ""}</option>
+        {/each}
+      </select>
+    </label>
+  {/if}
 
   <label class="form-control">
     <div class="label">

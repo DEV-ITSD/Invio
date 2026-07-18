@@ -69,6 +69,9 @@ CREATE TABLE invoices (
   -- Payment and notes
   payment_terms TEXT,
   notes TEXT,
+  template_id TEXT,
+  template_version_id TEXT,
+  template_html_snapshot TEXT,
   
   -- System fields
   share_token TEXT UNIQUE NOT NULL,
@@ -107,7 +110,23 @@ CREATE TABLE templates (
   html TEXT NOT NULL,
   is_default BOOLEAN DEFAULT FALSE,
   template_type TEXT DEFAULT 'builtin',
+  active_version_id TEXT,
+  updated_at TIMESTAMP,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS template_versions (
+  id TEXT PRIMARY KEY,
+  template_id TEXT NOT NULL REFERENCES templates(id) ON DELETE CASCADE,
+  version_number INTEGER NOT NULL,
+  html TEXT NOT NULL,
+  change_description TEXT,
+  source TEXT,
+  is_builtin INTEGER NOT NULL DEFAULT 0,
+  is_archived INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_by TEXT,
+  UNIQUE(template_id, version_number)
 );
 
 -- No built-in default template is seeded here; startup code installs maintained templates.
@@ -121,6 +140,8 @@ CREATE INDEX idx_invoices_customer ON invoices(customer_id);
 CREATE INDEX idx_invoices_status ON invoices(status);
 CREATE INDEX idx_invoices_share_token ON invoices(share_token);
 CREATE INDEX idx_invoice_items_invoice ON invoice_items(invoice_id);
+CREATE INDEX IF NOT EXISTS idx_template_versions_template ON template_versions(template_id, version_number DESC);
+CREATE INDEX IF NOT EXISTS idx_invoices_template_version ON invoices(template_version_id);
 
 -- Normalized tax schema (for complex/composite taxes)
 CREATE TABLE IF NOT EXISTS tax_definitions (

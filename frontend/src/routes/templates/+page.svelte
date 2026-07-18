@@ -40,7 +40,9 @@
       <div class="card-body p-4">
         <div class="font-semibold">{tpl.name || tpl.id}</div>
         <div class="mt-1 text-sm opacity-70">
-          {tpl.description || t("No description")}
+          {t("Active version")}
+          {tpl.activeVersionNumber || 1} · {tpl.versionCount || 1}
+          {t("Versions")}
         </div>
       </div>
     </a>
@@ -54,6 +56,7 @@
       <tr class="font-medium">
         <th>{t("Name")}</th>
         <th>{t("Description")}</th>
+        <th>{t("Versions")}</th>
       </tr>
     </thead>
     <tbody>
@@ -63,11 +66,12 @@
             <a class="link" href={`/templates/${tpl.id}`}>{tpl.name || tpl.id}</a>
           </td>
           <td class="opacity-70">{tpl.description || ""}</td>
+          <td><span class="badge badge-ghost">v{tpl.activeVersionNumber || 1}</span> <span class="text-xs opacity-60">/ {tpl.versionCount || 1}</span></td>
         </tr>
       {/each}
       {#if templates.length === 0}
         <tr>
-          <td colspan="2" class="py-10 text-center text-sm opacity-70">
+          <td colspan="3" class="py-10 text-center text-sm opacity-70">
             {t("No templates found.")}
           </td>
         </tr>
