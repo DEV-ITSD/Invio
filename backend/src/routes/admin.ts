@@ -73,6 +73,10 @@ import {
   updateUnit,
 } from "../controllers/productOptions.ts";
 import { buildInvoiceHTML, generatePDF } from "../utils/pdf.ts";
+import {
+  attachmentContentDisposition,
+  buildInvoicePdfFilename,
+} from "../utils/pdfFilename.ts";
 import { isEmailConfigured, sendEmail } from "../utils/email.ts";
 import { generateUBLInvoiceXML } from "../utils/ubl.ts"; // legacy direct import
 import { generateInvoiceXML, listXMLProfiles } from "../utils/xmlProfiles.ts";
@@ -161,9 +165,8 @@ function normalizeTaxSettingsPayload(data: Record<string, unknown>) {
     )
       .toLowerCase()
       .trim();
-    (data as Record<string, unknown>)["defaultRoundingMode"] = v === "total"
-      ? "total"
-      : "line";
+    (data as Record<string, unknown>)["defaultRoundingMode"] =
+      v === "total" ? "total" : "line";
   }
 }
 
@@ -326,8 +329,8 @@ function normalizeInvoiceProtectionSettingsPayload(
     .trim();
   const truthy = new Set(["1", "true", "yes", "y", "on"]);
   (data as Record<string, unknown>).allowProtectedInvoiceChanges = truthy.has(
-      raw,
-    )
+    raw,
+  )
     ? "true"
     : "false";
 }
@@ -1684,8 +1687,8 @@ adminRoutes.get(
 
     // Use template/highlight from settings only (no query overrides)
     const highlight = settingsMap.highlight ?? undefined;
-    let selectedTemplateId: string | undefined = settingsMap.templateId
-      ?.toLowerCase();
+    let selectedTemplateId: string | undefined =
+      settingsMap.templateId?.toLowerCase();
     if (
       selectedTemplateId === "professional" ||
       selectedTemplateId === "professional-modern"
@@ -1777,8 +1780,8 @@ adminRoutes.get(
 
     // Use template/highlight from settings only (no query overrides)
     const highlight = settingsMap.highlight ?? undefined;
-    let selectedTemplateId: string | undefined = settingsMap.templateId
-      ?.toLowerCase();
+    let selectedTemplateId: string | undefined =
+      settingsMap.templateId?.toLowerCase();
     if (
       selectedTemplateId === "professional" ||
       selectedTemplateId === "professional-modern"
@@ -1815,6 +1818,11 @@ adminRoutes.get(
           locale: renderLocale,
         },
       );
+      const pdfFilename = buildInvoicePdfFilename(
+        invoice,
+        businessSettings,
+        renderLocale,
+      );
       // Detect embedded attachments for diagnostics
       let hasAttachment = false;
       let attachmentNames: string[] = [];
@@ -1837,14 +1845,12 @@ adminRoutes.get(
       return new Response(pdfBuffer, {
         headers: {
           "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="invoice-${
-            invoice.invoiceNumber || id
-          }.pdf"`,
+          "Content-Disposition": attachmentContentDisposition(pdfFilename),
           ...(hasAttachment
             ? {
-              "X-Embedded-XML": "true",
-              "X-Embedded-XML-Names": attachmentNames.join(","),
-            }
+                "X-Embedded-XML": "true",
+                "X-Embedded-XML-Names": attachmentNames.join(","),
+              }
             : { "X-Embedded-XML": "false" }),
         },
       });
@@ -1882,8 +1888,8 @@ adminRoutes.post(
       const body = await c.req.json();
       to = Array.isArray(body.to)
         ? body.to.filter(
-          (e: unknown) => typeof e === "string" && e.includes("@"),
-        )
+            (e: unknown) => typeof e === "string" && e.includes("@"),
+          )
         : [];
       subject = typeof body.subject === "string" ? body.subject.trim() : "";
       message = typeof body.message === "string" ? body.message.trim() : "";
@@ -1940,8 +1946,8 @@ adminRoutes.post(
     };
 
     const highlight = settingsMap.highlight ?? undefined;
-    let selectedTemplateId: string | undefined = settingsMap.templateId
-      ?.toLowerCase();
+    let selectedTemplateId: string | undefined =
+      settingsMap.templateId?.toLowerCase();
     if (
       selectedTemplateId === "professional" ||
       selectedTemplateId === "professional-modern"
@@ -1956,6 +1962,7 @@ adminRoutes.post(
 
     // Generate PDF attachment
     let pdfBuffer: Uint8Array;
+    let pdfFilename = "invoice.pdf";
     try {
       const customer = getCustomerById(invoice.customerId);
       const renderLocale = resolveInvoiceRenderLocale(
@@ -1974,6 +1981,11 @@ adminRoutes.post(
           numberFormat: settingsMap.numberFormat,
           locale: renderLocale,
         },
+      );
+      pdfFilename = buildInvoicePdfFilename(
+        invoice,
+        businessSettings,
+        renderLocale,
       );
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -1999,20 +2011,20 @@ adminRoutes.post(
     const dueDate = invoice.dueDate
       ? new Date(invoice.dueDate).toISOString().slice(0, 10)
       : null;
-    const origin = c.req.header("origin") ||
+    const origin =
+      c.req.header("origin") ||
       c.req.header("referer")?.replace(/\/$/, "") ||
       "";
-    const shareLink = invoice.shareToken && origin
-      ? `${origin}/public/invoices/${invoice.shareToken}`
-      : null;
+    const shareLink =
+      invoice.shareToken && origin
+        ? `${origin}/public/invoices/${invoice.shareToken}`
+        : null;
 
     const messageHtml = message
-      ? `<p style="white-space:pre-wrap;">${
-        message
+      ? `<p style="white-space:pre-wrap;">${message
           .replace(/&/g, "&amp;")
           .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-      }</p>`
+          .replace(/>/g, "&gt;")}</p>`
       : "";
     const shareLinkHtml = shareLink
       ? `<p><a href="${shareLink}" style="color:#2563eb;">View invoice online</a></p>`
@@ -2059,7 +2071,7 @@ adminRoutes.post(
         htmlBody,
         textBody,
         attachment: {
-          filename: `invoice-${invoiceNumber}.pdf`,
+          filename: pdfFilename,
           content: pdfBuffer,
           mimeType: "application/pdf",
         },
@@ -2168,8 +2180,8 @@ adminRoutes.get(
     };
 
     const url = new URL(c.req.url);
-    const profileParam = url.searchParams.get("profile") || map.xmlProfileId ||
-      undefined;
+    const profileParam =
+      url.searchParams.get("profile") || map.xmlProfileId || undefined;
     const { xml, profile } = generateInvoiceXML(
       profileParam,
       invoice,
@@ -2299,7 +2311,8 @@ adminRoutes.delete("/users/me/2fa", async (c) => {
 // GET /users/permissions-schema — returns the valid resources and actions
 adminRoutes.get("/users/permissions-schema", (c) => {
   const user = getAuthUser(c);
-  const canViewSchema = !!user &&
+  const canViewSchema =
+    !!user &&
     (user.isAdmin ||
       user.permissions.some(
         (p) =>
