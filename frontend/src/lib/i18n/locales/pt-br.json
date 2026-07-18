@@ -247,6 +247,8 @@
   "Outstanding": "Pendente",
   "Overdue": "Atrasado",
   "PDF": "PDF",
+  "PDF Name": "Nome para PDF",
+  "PDF name help": "Letras, números, espaços e hífens; usado como a primeira parte do nome do arquivo PDF",
   "Paid": "Pago",
   "Password": "Senha",
   "Payment Methods": "Métodos de Pagamento",
