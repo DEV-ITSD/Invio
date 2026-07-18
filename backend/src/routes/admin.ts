@@ -945,6 +945,8 @@ adminRoutes.post(
   async (c) => {
     const id = c.req.param("id");
     const data = await c.req.json();
+    const previewLocale = typeof data.locale === "string" ? data.locale : "en";
+    const previewLocalization = getInvoiceLabels(previewLocale);
 
     const template = getTemplateById(id);
     if (!template) {
@@ -962,8 +964,8 @@ adminRoutes.post(
       issueDate: "2025-08-26",
       dueDate: "2025-09-25",
       currency: "USD",
-      locale: "en",
-      labels: getInvoiceLabels("en"),
+      locale: previewLocalization.locale,
+      labels: previewLocalization.labels,
       status: "draft",
       customerName: "John Doe",
       customerEmail: "john@example.com",

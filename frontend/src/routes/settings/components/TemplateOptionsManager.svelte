@@ -2,8 +2,9 @@
   import { getContext } from "svelte";
   import { Upload, Link, Trash2, RefreshCw } from "lucide-svelte";
   import { invalidateAll } from "$app/navigation";
+  import TemplateVersionEditor from "./TemplateVersionEditor.svelte";
 
-  let { templates = [] } = $props();
+  let { templates = [], selectedTemplateId = "", previewLocale = "en" } = $props();
   let t = getContext("i18n") as (key: string, params?: any) => string;
 
   // File Upload
@@ -66,7 +67,7 @@
 
     installBusy = true;
     try {
-      const res = await fetch("/api/v1/templates/install", {
+      const res = await fetch("/api/v1/templates/install-from-manifest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: u }),
@@ -117,10 +118,13 @@
         {#each templates as tmpl (tmpl.id)}
           <div class="card bg-base-200 border-base-300 border">
             <div class="card-body p-4">
-              <h4 class="card-title text-base">{tmpl.name}</h4>
+              <h4 class="card-title text-base">
+                <a class="link link-hover" href={`/settings?section=templates&template=${encodeURIComponent(tmpl.id)}`}>{tmpl.name}</a>
+              </h4>
               <p class="text-sm opacity-70">
                 Type: <span class="badge badge-sm">{tmpl.templateType || "Unknown"}</span>
               </p>
+              <p class="text-xs opacity-60">{t("Active version")} {tmpl.activeVersionNumber || 1} · {tmpl.versionCount || 1} {t("Versions")}</p>
               <div class="card-actions mt-4 justify-end">
                 {#if tmpl.updatable && tmpl.templateType === "remote"}
                   <button class="btn btn-sm btn-outline" onclick={() => handleUpdate(tmpl.id)} title={t("Update")}><RefreshCw size={16} /></button>
@@ -131,6 +135,10 @@
           </div>
         {/each}
       </div>
+    {/if}
+
+    {#if selectedTemplateId}
+      <TemplateVersionEditor templateId={selectedTemplateId} {previewLocale} />
     {/if}
   </div>
 
