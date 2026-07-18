@@ -1,5 +1,5 @@
 import { getDatabase } from "../database/init.ts";
-import { Template, TemplateType } from "../types/index.ts";
+import { Template, TemplateType, TemplateVersion } from "../types/index.ts";
 import { resolveInDataRoot } from "../utils/dataPaths.ts";
 import { generateUUID } from "../utils/uuid.ts";
 import { parse as parseYaml } from "yaml";
@@ -40,23 +40,21 @@ async function fetchBytes(url: URL): Promise<Uint8Array> {
 
 async function sha256Hex(source: Uint8Array | ArrayBuffer): Promise<string> {
   const buffer = source instanceof Uint8Array
-    ? source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength)
+    ? source.buffer.slice(
+      source.byteOffset,
+      source.byteOffset + source.byteLength,
+    )
     : source.slice(0);
   const hash = await crypto.subtle.digest("SHA-256", buffer as ArrayBuffer);
-  return Array.from(new Uint8Array(hash)).map((b) =>
-    b.toString(16).padStart(2, "0")
-  ).join("");
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 function basicHtmlSanity(html: string): void {
   const lower = html.toLowerCase();
   // Block dangerous embed containers and executable script tags.
-  const bannedTags = [
-    "<iframe",
-    "<object",
-    "<embed",
-    "<script",
-  ];
+  const bannedTags = ["<iframe", "<object", "<embed", "<script"];
   for (const tag of bannedTags) {
     if (lower.includes(tag)) {
       throw new Error(`HTML contains disallowed tag: ${tag}`);
@@ -107,21 +105,24 @@ function sanitizeManifestPath(pathValue: string): string {
   }
   const unixified = trimmed.replaceAll("\\", "/");
   const normalized = normalize(unixified);
-  if (!normalized || normalized.startsWith("..") || normalized.includes("/../")) {
+  if (
+    !normalized ||
+    normalized.startsWith("..") ||
+    normalized.includes("/../")
+  ) {
     throw new Error("html.path must stay within the template directory");
   }
   return normalized;
 }
 
-const FORBIDDEN_HOSTS = new Set([
-  "localhost",
-  "127.0.0.1",
-  "::1",
-]);
+const FORBIDDEN_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
 function isPrivateIPv4(hostname: string): boolean {
   const parts = hostname.split(".").map((p) => Number(p));
-  if (parts.length !== 4 || parts.some((n) => Number.isNaN(n) || n < 0 || n > 255)) {
+  if (
+    parts.length !== 4 ||
+    parts.some((n) => Number.isNaN(n) || n < 0 || n > 255)
+  ) {
     return false;
   }
   const [a, b] = parts;
@@ -215,7 +216,8 @@ async function assertSafeRemoteUrl(raw: string, field: string): Promise<URL> {
   //    Defeats DNS-rebinding / A-record-points-internal SSRF. If the host is
   //    already an IP literal, resolveDns is skipped (it would error).
   const bare = stripIpv6Brackets(url.hostname);
-  const looksLikeIp = bare.includes(":") || /^\d{1,3}(\.\d{1,3}){3}$/.test(bare);
+  const looksLikeIp = bare.includes(":") ||
+    /^\d{1,3}(\.\d{1,3}){3}$/.test(bare);
   if (!looksLikeIp) {
     let addrs: string[] = [];
     for (const kind of ["A", "AAAA"] as const) {
@@ -270,9 +272,15 @@ export async function installTemplateFromManifest(manifestUrl: string) {
   assertManifestShape(manifest);
 
   const manifestId = enforceSafeIdentifier(manifest.id, "manifest.id");
-  const manifestVersion = enforceSafeIdentifier(manifest.version, "manifest.version");
+  const manifestVersion = enforceSafeIdentifier(
+    manifest.version,
+    "manifest.version",
+  );
   const manifestPath = sanitizeManifestPath(String(manifest.html.path));
-  const htmlUrl = await assertSafeRemoteUrl(String(manifest.html.url), "manifest.html.url");
+  const htmlUrl = await assertSafeRemoteUrl(
+    String(manifest.html.url),
+    "manifest.html.url",
+  );
 
   const htmlBuf = await fetchBytes(htmlUrl);
   if (htmlBuf.byteLength > 128 * 1024) {
@@ -310,7 +318,12 @@ export async function installTemplateFromManifest(manifestUrl: string) {
 export const getTemplates = () => {
   const db = getDatabase();
   const results = db.query(
-    "SELECT id, name, html, is_default, template_type, created_at FROM templates ORDER BY created_at DESC",
+    `SELECT t.id, t.name, t.html, t.is_default, t.template_type, t.created_at,
+            t.active_version_id, av.version_number,
+            (SELECT COUNT(*) FROM template_versions tv WHERE tv.template_id = t.id)
+       FROM templates t
+       LEFT JOIN template_versions av ON av.id = t.active_version_id
+      ORDER BY t.created_at DESC`,
   );
   return results.map((row: unknown[]) => ({
     id: row[0] as string,
@@ -319,13 +332,28 @@ export const getTemplates = () => {
     isDefault: row[3] as boolean,
     templateType: (row[4] as TemplateType) || "builtin",
     createdAt: new Date(row[5] as string),
+    activeVersionId: row[6] ? String(row[6]) : undefined,
+    activeVersionNumber: Number(row[7] ?? 1),
+    versionCount: Number(row[8] ?? 0),
+    versions: getTemplateVersions(String(row[0]), false).map((version) => ({
+      id: version.id,
+      versionNumber: version.versionNumber,
+      isBuiltin: version.isBuiltin,
+      isArchived: version.isArchived,
+      changeDescription: version.changeDescription,
+    })),
   }));
 };
 
 export const getTemplateById = (id: string) => {
   const db = getDatabase();
   const rows = db.query(
-    "SELECT id, name, html, is_default, template_type, created_at FROM templates WHERE id = ? LIMIT 1",
+    `SELECT t.id, t.name, t.html, t.is_default, t.template_type, t.created_at,
+            t.active_version_id, av.version_number,
+            (SELECT COUNT(*) FROM template_versions tv WHERE tv.template_id = t.id)
+       FROM templates t
+       LEFT JOIN template_versions av ON av.id = t.active_version_id
+      WHERE t.id = ? LIMIT 1`,
     [id],
   );
   if (rows.length === 0) {
@@ -339,7 +367,241 @@ export const getTemplateById = (id: string) => {
     isDefault: Boolean(row[3]),
     templateType: (row[4] as TemplateType) || "builtin",
     createdAt: new Date(row[5] as string),
+    activeVersionId: row[6] ? String(row[6]) : undefined,
+    activeVersionNumber: Number(row[7] ?? 1),
+    versionCount: Number(row[8] ?? 0),
   } as Template;
+};
+
+function mapTemplateVersion(row: unknown[]): TemplateVersion {
+  return {
+    id: String(row[0]),
+    templateId: String(row[1]),
+    versionNumber: Number(row[2]),
+    html: String(row[3]),
+    changeDescription: row[4] ? String(row[4]) : undefined,
+    source: row[5] ? String(row[5]) : undefined,
+    isBuiltin: Boolean(row[6]),
+    isArchived: Boolean(row[7]),
+    createdAt: new Date(String(row[8])),
+    createdBy: row[9] ? String(row[9]) : undefined,
+  };
+}
+
+export const getTemplateVersions = (
+  templateId: string,
+  includeArchived = true,
+): TemplateVersion[] => {
+  const db = getDatabase();
+  const rows = db.query(
+    `SELECT id, template_id, version_number, html, change_description, source,
+            is_builtin, is_archived, created_at, created_by
+       FROM template_versions
+      WHERE template_id = ? ${includeArchived ? "" : "AND is_archived = 0"}
+      ORDER BY version_number DESC`,
+    [templateId],
+  );
+  return rows.map((row: unknown[]) => mapTemplateVersion(row));
+};
+
+export const getTemplateVersion = (
+  templateId: string,
+  versionId: string,
+): TemplateVersion | undefined => {
+  const db = getDatabase();
+  const rows = db.query(
+    `SELECT id, template_id, version_number, html, change_description, source,
+            is_builtin, is_archived, created_at, created_by
+       FROM template_versions WHERE id = ? AND template_id = ? LIMIT 1`,
+    [versionId, templateId],
+  );
+  return rows.length ? mapTemplateVersion(rows[0] as unknown[]) : undefined;
+};
+
+export const getTemplateVersionById = (
+  versionId: string,
+): TemplateVersion | undefined => {
+  const db = getDatabase();
+  const rows = db.query(
+    `SELECT id, template_id, version_number, html, change_description, source,
+            is_builtin, is_archived, created_at, created_by
+       FROM template_versions WHERE id = ? LIMIT 1`,
+    [versionId],
+  );
+  return rows.length ? mapTemplateVersion(rows[0] as unknown[]) : undefined;
+};
+
+function setSettingValue(key: string, value: string): void {
+  const db = getDatabase();
+  const exists = db.query("SELECT 1 FROM settings WHERE key = ?", [key]);
+  if (exists.length) {
+    db.query("UPDATE settings SET value = ? WHERE key = ?", [value, key]);
+  } else {
+    db.query("INSERT INTO settings (key, value) VALUES (?, ?)", [key, value]);
+  }
+}
+
+export const activateTemplateVersion = (
+  templateId: string,
+  versionId: string,
+): TemplateVersion => {
+  const db = getDatabase();
+  const version = getTemplateVersion(templateId, versionId);
+  if (!version) throw new Error("Template version not found");
+  if (version.isArchived) {
+    throw new Error("Archived versions cannot be activated");
+  }
+
+  db.query(
+    "UPDATE templates SET html = ?, active_version_id = ?, updated_at = ? WHERE id = ?",
+    [version.html, version.id, new Date().toISOString(), templateId],
+  );
+  const selectedTemplate = db.query(
+    "SELECT value FROM settings WHERE key = 'templateId' LIMIT 1",
+  );
+  if (
+    selectedTemplate.length &&
+    String(selectedTemplate[0][0]) === templateId
+  ) {
+    setSettingValue("templateVersionId", version.id);
+  }
+  return version;
+};
+
+export const createTemplateVersion = (
+  templateId: string,
+  data: {
+    html: string;
+    changeDescription?: string;
+    activate?: boolean;
+    source?: string;
+    createdBy?: string;
+    isBuiltin?: boolean;
+  },
+): TemplateVersion => {
+  const db = getDatabase();
+  if (!getTemplateById(templateId)) throw new Error("Template not found");
+  if (!data.html?.trim()) throw new Error("Template HTML is required");
+  if (new TextEncoder().encode(data.html).byteLength > 128 * 1024) {
+    throw new Error("Template HTML exceeds the 128 KB limit");
+  }
+  basicHtmlSanity(data.html);
+  const maxRows = db.query(
+    "SELECT COALESCE(MAX(version_number), 0) FROM template_versions WHERE template_id = ?",
+    [templateId],
+  );
+  const versionNumber = Number(maxRows[0]?.[0] ?? 0) + 1;
+  const versionId = generateUUID();
+  const createdAt = new Date().toISOString();
+  db.query(
+    `INSERT INTO template_versions
+      (id, template_id, version_number, html, change_description, source,
+       is_builtin, is_archived, created_at, created_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
+    [
+      versionId,
+      templateId,
+      versionNumber,
+      data.html,
+      data.changeDescription?.trim() || `Version ${versionNumber}`,
+      data.source || "editor",
+      data.isBuiltin ? 1 : 0,
+      createdAt,
+      data.createdBy || null,
+    ],
+  );
+  const version = getTemplateVersion(templateId, versionId)!;
+  if (data.activate !== false) activateTemplateVersion(templateId, versionId);
+  return version;
+};
+
+export const restoreTemplateVersion = (
+  templateId: string,
+  versionId: string,
+  createdBy?: string,
+): TemplateVersion => {
+  const source = getTemplateVersion(templateId, versionId);
+  if (!source) throw new Error("Template version not found");
+  return createTemplateVersion(templateId, {
+    html: source.html,
+    changeDescription: `Restored from version ${source.versionNumber}`,
+    source: "restore",
+    createdBy,
+    activate: true,
+  });
+};
+
+export const archiveTemplateVersion = (
+  templateId: string,
+  versionId: string,
+): TemplateVersion => {
+  const db = getDatabase();
+  const template = getTemplateById(templateId);
+  const version = getTemplateVersion(templateId, versionId);
+  if (!template || !version) throw new Error("Template version not found");
+  if (template.activeVersionId === versionId) {
+    throw new Error("The active version cannot be archived");
+  }
+  db.query("UPDATE template_versions SET is_archived = 1 WHERE id = ?", [
+    versionId,
+  ]);
+  return getTemplateVersion(templateId, versionId)!;
+};
+
+export const deleteTemplateVersion = (
+  templateId: string,
+  versionId: string,
+): true => {
+  const db = getDatabase();
+  const template = getTemplateById(templateId);
+  const version = getTemplateVersion(templateId, versionId);
+  if (!template || !version) throw new Error("Template version not found");
+  if (template.activeVersionId === versionId) {
+    throw new Error("The active version cannot be deleted");
+  }
+  if (version.isBuiltin) throw new Error("Built-in versions cannot be deleted");
+  if ((template.versionCount ?? 0) <= 1) {
+    throw new Error("The last template version cannot be deleted");
+  }
+  const usage = db.query(
+    "SELECT COUNT(*) FROM invoices WHERE template_version_id = ?",
+    [versionId],
+  );
+  if (Number(usage[0]?.[0] ?? 0) > 0) {
+    throw new Error("This version is used by invoices; archive it instead");
+  }
+  db.query("DELETE FROM template_versions WHERE id = ?", [versionId]);
+  return true;
+};
+
+export const resolveTemplateSelection = (
+  requestedTemplateId?: string,
+  requestedVersionId?: string,
+): { template: Template; version: TemplateVersion; html: string } => {
+  const db = getDatabase();
+  const settingRows = db.query(
+    "SELECT key, value FROM settings WHERE key IN ('templateId', 'templateVersionId')",
+  );
+  const settings = Object.fromEntries(
+    settingRows.map((row: unknown[]) => [String(row[0]), String(row[1])]),
+  );
+  const templateId = requestedTemplateId || settings.templateId;
+  const template = (templateId ? getTemplateById(templateId) : undefined) ||
+    getDefaultTemplate();
+  if (!template) throw new Error("No invoice template is available");
+  const versionId = requestedVersionId ||
+    (settings.templateId === template.id
+      ? settings.templateVersionId
+      : undefined) ||
+    template.activeVersionId;
+  let version = versionId
+    ? getTemplateVersion(template.id, versionId)
+    : undefined;
+  if (!version) {
+    version = getTemplateVersions(template.id, false)[0];
+  }
+  if (!version) throw new Error("No template version is available");
+  return { template, version, html: version.html };
 };
 
 let builtInDefaultTemplate: Template | null | undefined;
@@ -349,7 +611,10 @@ function loadBuiltinTemplate(): Template | null {
     return builtInDefaultTemplate;
   }
   try {
-    const url = new URL("../../static/templates/professional-modern.html", import.meta.url);
+    const url = new URL(
+      "../../static/templates/professional-modern.html",
+      import.meta.url,
+    );
     const html = Deno.readTextFileSync(url);
     builtInDefaultTemplate = {
       id: "builtin-professional-modern",
@@ -431,7 +696,8 @@ export const renderTemplate = (
     const clean = path.trim().replace(/^['"]|['"]$/g, "");
     return clean.split(".").reduce<unknown>((acc, key) => {
       if (
-        acc && typeof acc === "object" &&
+        acc &&
+        typeof acc === "object" &&
         key in (acc as Record<string, unknown>)
       ) {
         return (acc as Record<string, unknown>)[key];
@@ -456,16 +722,19 @@ export const renderTemplate = (
       const val = lookup(ctx, key);
       let replacement = "";
       if (Array.isArray(val)) {
-        replacement = val.map((it) => {
-          const scope = merge(ctx, (it as Record<string, unknown>) || {});
-          return renderAll(inner, scope);
-        }).join("");
+        replacement = val
+          .map((it) => {
+            const scope = merge(ctx, (it as Record<string, unknown>) || {});
+            return renderAll(inner, scope);
+          })
+          .join("");
       } else if (val) {
         replacement = renderAll(inner, ctx);
       } else {
         replacement = "";
       }
-      result = result.slice(0, match.index) + replacement +
+      result = result.slice(0, match.index) +
+        replacement +
         result.slice(match.index + full.length);
       blockRe.lastIndex = 0; // reset after modifying string
     }
@@ -511,6 +780,8 @@ export const renderTemplate = (
 export const createTemplate = (data: Partial<Template>) => {
   const db = getDatabase();
   const templateId = generateUUID();
+  if (!data.html?.trim()) throw new Error("Template HTML is required");
+  basicHtmlSanity(data.html);
 
   const template: Template = {
     id: templateId,
@@ -526,8 +797,9 @@ export const createTemplate = (data: Partial<Template>) => {
     db.query("UPDATE templates SET is_default = 0");
   }
 
+  const versionId = generateUUID();
   db.query(
-    "INSERT INTO templates (id, name, html, is_default, template_type, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+    "INSERT INTO templates (id, name, html, is_default, template_type, created_at, updated_at, active_version_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     [
       template.id,
       template.name,
@@ -535,67 +807,106 @@ export const createTemplate = (data: Partial<Template>) => {
       template.isDefault,
       template.templateType,
       template.createdAt,
+      template.createdAt,
+      versionId,
     ],
   );
 
-  return template;
+  db.query(
+    `INSERT INTO template_versions
+      (id, template_id, version_number, html, change_description, source, is_builtin, is_archived, created_at)
+     VALUES (?, ?, 1, ?, 'Initial version', 'create', 0, 0, ?)`,
+    [versionId, template.id, template.html, template.createdAt],
+  );
+
+  if (template.isDefault) setDefaultTemplate(template.id, versionId);
+
+  return getTemplateById(template.id)!;
 };
 
 // Insert or replace a template with a specific id (used by manifest installs)
-export const upsertTemplateWithId = (
-  id: string,
-  data: Partial<Template>,
-) => {
+export const upsertTemplateWithId = (id: string, data: Partial<Template>) => {
   const db = getDatabase();
+  const existing = getTemplateById(id);
+  if (existing) {
+    if (data.isDefault === true) setDefaultTemplate(id);
+    if (data.name) {
+      db.query("UPDATE templates SET name = ? WHERE id = ?", [data.name, id]);
+    }
+    if (data.html && data.html !== existing.html) {
+      createTemplateVersion(id, {
+        html: data.html,
+        changeDescription: "Installed template update",
+        source: "installer",
+        activate: true,
+      });
+    }
+    return getTemplateById(id);
+  }
   if (data.isDefault === true) {
     db.query("UPDATE templates SET is_default = 0 WHERE id != ?", [id]);
   }
+  if (!data.html?.trim()) throw new Error("Template HTML is required");
+  basicHtmlSanity(data.html);
+  const versionId = generateUUID();
+  const now = new Date().toISOString();
   db.query(
-    "INSERT OR REPLACE INTO templates (id, name, html, is_default, template_type, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+    "INSERT INTO templates (id, name, html, is_default, template_type, created_at, updated_at, active_version_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     [
       id,
       data.name || id,
       data.html || "",
       data.isDefault || false,
       data.templateType || "remote",
-      new Date().toISOString(),
+      now,
+      now,
+      versionId,
     ],
   );
+  db.query(
+    `INSERT INTO template_versions
+      (id, template_id, version_number, html, change_description, source, is_builtin, is_archived, created_at)
+     VALUES (?, ?, 1, ?, 'Initial installed version', 'installer', 0, 0, ?)`,
+    [versionId, id, data.html, now],
+  );
+  if (data.isDefault) setDefaultTemplate(id, versionId);
   return getTemplateById(id);
 };
 
 export const updateTemplate = (id: string, data: Partial<Template>) => {
   const db = getDatabase();
+  const existing = getTemplateById(id);
+  if (!existing) return null;
   // Enforce a single default when toggling isDefault to true
   if (data.isDefault === true) {
     db.query("UPDATE templates SET is_default = 0 WHERE id != ?", [id]);
   }
 
-  db.query(
-    "UPDATE templates SET name = ?, html = ?, is_default = ? WHERE id = ?",
-    [data.name, data.html, data.isDefault, id],
-  );
-
-  const result = db.query(
-    "SELECT id, name, html, is_default, template_type, created_at FROM templates WHERE id = ?",
-    [id],
-  );
-  if (result.length > 0) {
-    const row = result[0] as unknown[];
-    return {
-      id: row[0] as string,
-      name: row[1] as string,
-      html: row[2] as string,
-      isDefault: row[3] as boolean,
-      templateType: (row[4] as TemplateType) || "builtin",
-      createdAt: new Date(row[5] as string),
-    };
+  db.query("UPDATE templates SET name = ?, is_default = ? WHERE id = ?", [
+    data.name ?? existing.name,
+    data.isDefault ?? existing.isDefault,
+    id,
+  ]);
+  if (data.html && data.html !== existing.html) {
+    createTemplateVersion(id, {
+      html: data.html,
+      changeDescription: "Updated through API",
+      source: "api",
+      activate: true,
+    });
   }
-  return null;
+  return getTemplateById(id) ?? null;
 };
 
 export const deleteTemplate = (id: string) => {
   const db = getDatabase();
+  const usage = db.query(
+    "SELECT COUNT(*) FROM invoices WHERE template_id = ?",
+    [id],
+  );
+  if (Number(usage[0]?.[0] ?? 0) > 0) {
+    throw new Error("This template is used by invoices and cannot be deleted");
+  }
   db.query("DELETE FROM templates WHERE id = ?", [id]);
   // Best-effort cleanup of stored files for this template id (all versions)
   try {
@@ -609,12 +920,22 @@ export const deleteTemplate = (id: string) => {
 };
 
 // Set the active default template by id, unsetting all others
-export const setDefaultTemplate = (id: string) => {
+export const setDefaultTemplate = (id: string, versionId?: string) => {
   const db = getDatabase();
+  const template = getTemplateById(id);
+  if (!template) throw new Error("Template not found");
+  const selectedVersionId = versionId || template.activeVersionId;
+  if (selectedVersionId && !getTemplateVersion(id, selectedVersionId)) {
+    throw new Error("Template version not found");
+  }
   // Reset all
   db.query("UPDATE templates SET is_default = 0");
   // Set requested id; ignore if not found (no rows updated)
   db.query("UPDATE templates SET is_default = 1 WHERE id = ?", [id]);
+  setSettingValue("templateId", id);
+  if (selectedVersionId) {
+    setSettingValue("templateVersionId", selectedVersionId);
+  }
   return true;
 };
 
