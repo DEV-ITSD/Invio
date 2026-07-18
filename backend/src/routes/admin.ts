@@ -1677,6 +1677,8 @@ adminRoutes.get(
       bankAccount: settingsMap.bankAccount || "",
       paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
       defaultNotes: settingsMap.defaultNotes || "",
+      invoiceDocumentTitle: settingsMap.invoiceDocumentTitle || undefined,
+      receiptDocumentTitle: settingsMap.receiptDocumentTitle || undefined,
       locale: settingsMap.locale || undefined,
     };
 
@@ -1768,6 +1770,8 @@ adminRoutes.get(
       bankAccount: settingsMap.bankAccount || "",
       paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
       defaultNotes: settingsMap.defaultNotes || "",
+      invoiceDocumentTitle: settingsMap.invoiceDocumentTitle || undefined,
+      receiptDocumentTitle: settingsMap.receiptDocumentTitle || undefined,
       locale: settingsMap.locale || undefined,
     };
 
@@ -1930,6 +1934,8 @@ adminRoutes.post(
       bankAccount: settingsMap.bankAccount || "",
       paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
       defaultNotes: settingsMap.defaultNotes || "",
+      invoiceDocumentTitle: settingsMap.invoiceDocumentTitle || undefined,
+      receiptDocumentTitle: settingsMap.receiptDocumentTitle || undefined,
       locale: settingsMap.locale || undefined,
     };
 
