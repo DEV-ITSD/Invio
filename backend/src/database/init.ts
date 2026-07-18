@@ -206,6 +206,75 @@ function ensureInvoiceColumns(database: DB): void {
     "rounding_mode",
     "TEXT DEFAULT 'line'",
   );
+  addColumnIfMissing(database, "invoices", "template_id", "TEXT");
+  addColumnIfMissing(database, "invoices", "template_version_id", "TEXT");
+  addColumnIfMissing(database, "invoices", "template_html_snapshot", "TEXT");
+}
+
+function ensureTemplateVersioning(database: DB): void {
+  // Existing installations may reach this upgrade before ensureInvoiceColumns.
+  // Keep these additions here as well so the usage index can always be created.
+  addColumnIfMissing(database, "invoices", "template_id", "TEXT");
+  addColumnIfMissing(database, "invoices", "template_version_id", "TEXT");
+  addColumnIfMissing(database, "invoices", "template_html_snapshot", "TEXT");
+  addColumnIfMissing(database, "templates", "active_version_id", "TEXT");
+  addColumnIfMissing(database, "templates", "updated_at", "TEXT");
+  database.execute(`
+    CREATE TABLE IF NOT EXISTS template_versions (
+      id TEXT PRIMARY KEY,
+      template_id TEXT NOT NULL REFERENCES templates(id) ON DELETE CASCADE,
+      version_number INTEGER NOT NULL,
+      html TEXT NOT NULL,
+      change_description TEXT,
+      source TEXT,
+      is_builtin INTEGER NOT NULL DEFAULT 0,
+      is_archived INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      created_by TEXT,
+      UNIQUE(template_id, version_number)
+    )
+  `);
+  database.execute(
+    "CREATE INDEX IF NOT EXISTS idx_template_versions_template ON template_versions(template_id, version_number DESC)",
+  );
+  database.execute(
+    "CREATE INDEX IF NOT EXISTS idx_invoices_template_version ON invoices(template_version_id)",
+  );
+
+  const templates = database.query(
+    "SELECT id, html, template_type, created_at, active_version_id FROM templates",
+  ) as unknown[][];
+  for (const row of templates) {
+    const templateId = String(row[0]);
+    const existing = database.query(
+      "SELECT id FROM template_versions WHERE template_id = ? ORDER BY version_number LIMIT 1",
+      [templateId],
+    ) as unknown[][];
+    let versionId = existing.length > 0 ? String(existing[0][0]) : "";
+    if (!versionId) {
+      versionId = `${templateId}-v1`;
+      database.query(
+        `INSERT INTO template_versions
+          (id, template_id, version_number, html, change_description, source, is_builtin, is_archived, created_at)
+         VALUES (?, ?, 1, ?, ?, ?, ?, 0, ?)`,
+        [
+          versionId,
+          templateId,
+          String(row[1] ?? ""),
+          "Initial version",
+          "migration",
+          String(row[2] ?? "builtin") === "builtin" ? 1 : 0,
+          String(row[3] ?? new Date().toISOString()),
+        ],
+      );
+    }
+    if (!row[4]) {
+      database.query(
+        "UPDATE templates SET active_version_id = ?, updated_at = COALESCE(updated_at, created_at) WHERE id = ?",
+        [versionId, templateId],
+      );
+    }
+  }
 }
 
 function ensureInvoiceItemColumns(database: DB): void {
@@ -426,7 +495,10 @@ function migrateInvoicesForVoided(database: DB): void {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         prices_include_tax BOOLEAN DEFAULT 0,
         rounding_mode TEXT DEFAULT 'line',
-        locale TEXT
+        locale TEXT,
+        template_id TEXT,
+        template_version_id TEXT,
+        template_html_snapshot TEXT
       )
     `);
 
@@ -455,6 +527,9 @@ function migrateInvoicesForVoided(database: DB): void {
     );
     database.execute(
       "CREATE INDEX IF NOT EXISTS idx_invoices_share_token ON invoices(share_token)",
+    );
+    database.execute(
+      "CREATE INDEX IF NOT EXISTS idx_invoices_template_version ON invoices(template_version_id)",
     );
 
     database.execute("COMMIT");
@@ -488,6 +563,7 @@ function ensureSchemaUpgrades(database: DB): void {
     ensureCustomerColumns(database);
     backfillCustomerNumbers(database);
     ensureInvoiceColumns(database);
+    ensureTemplateVersioning(database);
     ensureTaxTables(database);
     ensureProductTables(database);
     seedProductDefaults(database);
@@ -527,23 +603,63 @@ function insertBuiltinTemplates(database: DB): void {
     const html = loadTemplateHtml(t.id);
     try {
       const existing = database.query(
-        "SELECT html FROM templates WHERE id = ?",
+        "SELECT html, active_version_id FROM templates WHERE id = ?",
         [t.id],
       );
       if (existing.length === 0) {
+        const versionId = `${t.id}-v1`;
+        const now = new Date().toISOString();
         database.query(
-          "INSERT INTO templates (id, name, html, is_default, created_at) VALUES (?, ?, ?, ?, ?)",
-          [t.id, t.name, html, t.isDefault, new Date().toISOString()],
+          "INSERT INTO templates (id, name, html, is_default, template_type, active_version_id, created_at, updated_at) VALUES (?, ?, ?, ?, 'builtin', ?, ?, ?)",
+          [t.id, t.name, html, t.isDefault, versionId, now, now],
+        );
+        database.query(
+          `INSERT INTO template_versions
+            (id, template_id, version_number, html, change_description, source, is_builtin, is_archived, created_at)
+           VALUES (?, ?, 1, ?, ?, 'application', 1, 0, ?)`,
+          [versionId, t.id, html, "Built-in version", now],
         );
         console.log(` Installed template: ${t.name}`);
       } else {
-        const current = String((existing[0] as unknown[])[0] ?? "");
-        if (current.trim() !== html.trim()) {
+        const sameVersion = database.query(
+          "SELECT id FROM template_versions WHERE template_id = ? AND html = ? LIMIT 1",
+          [t.id, html],
+        ) as unknown[][];
+        if (sameVersion.length === 0) {
+          const maxRows = database.query(
+            "SELECT COALESCE(MAX(version_number), 0) FROM template_versions WHERE template_id = ?",
+            [t.id],
+          ) as unknown[][];
+          const next = Number(maxRows[0]?.[0] ?? 0) + 1;
+          const versionId = generateUUID();
+          const now = new Date().toISOString();
           database.query(
-            "UPDATE templates SET name = ?, html = ?, is_default = ? WHERE id = ?",
-            [t.name, html, t.isDefault, t.id],
+            `INSERT INTO template_versions
+              (id, template_id, version_number, html, change_description, source, is_builtin, is_archived, created_at)
+             VALUES (?, ?, ?, ?, ?, 'application', 1, 0, ?)`,
+            [versionId, t.id, next, html, "Application update", now],
           );
-          console.log(`  Updated template from file: ${t.name}`);
+          const activeId = String((existing[0] as unknown[])[1] ?? "");
+          const activeRows = activeId
+            ? (database.query(
+              "SELECT is_builtin FROM template_versions WHERE id = ?",
+              [activeId],
+            ) as unknown[][])
+            : [];
+          const shouldActivate = activeRows.length === 0 ||
+            Boolean(activeRows[0][0]);
+          if (shouldActivate) {
+            database.query(
+              "UPDATE templates SET name = ?, html = ?, active_version_id = ?, updated_at = ? WHERE id = ?",
+              [t.name, html, versionId, now, t.id],
+            );
+          }
+          console.log(`  Added built-in template version: ${t.name} v${next}`);
+        } else {
+          database.query("UPDATE templates SET name = ? WHERE id = ?", [
+            t.name,
+            t.id,
+          ]);
         }
       }
     } catch (error) {
@@ -571,6 +687,38 @@ function ensureTemplateDefaults(database: DB): void {
     }
   } catch (e) {
     console.error("Failed to ensure template defaults:", e);
+  }
+}
+
+function backfillInvoiceTemplateSnapshots(database: DB): void {
+  try {
+    const selectedRows = database.query(
+      "SELECT value FROM settings WHERE key = 'templateId' LIMIT 1",
+    ) as unknown[][];
+    const requestedId = selectedRows.length ? String(selectedRows[0][0]) : "";
+    let templateRows = requestedId
+      ? (database.query(
+        "SELECT id, active_version_id, html FROM templates WHERE id = ? LIMIT 1",
+        [requestedId],
+      ) as unknown[][])
+      : [];
+    if (templateRows.length === 0) {
+      templateRows = database.query(
+        "SELECT id, active_version_id, html FROM templates ORDER BY is_default DESC, created_at DESC LIMIT 1",
+      ) as unknown[][];
+    }
+    if (templateRows.length === 0) return;
+    const [templateId, versionId, html] = templateRows[0];
+    database.query(
+      `UPDATE invoices
+          SET template_id = COALESCE(template_id, ?),
+              template_version_id = COALESCE(template_version_id, ?),
+              template_html_snapshot = COALESCE(template_html_snapshot, ?)
+        WHERE template_html_snapshot IS NULL OR template_html_snapshot = ''`,
+      [String(templateId), versionId ? String(versionId) : null, String(html)],
+    );
+  } catch (error) {
+    console.warn("Failed to backfill invoice template snapshots:", error);
   }
 }
 
@@ -642,8 +790,10 @@ export async function initDatabase(): Promise<void> {
   executeMigrations(db, parseSqlStatements(sql));
 
   // Post-migration setup
+  ensureTemplateVersioning(db);
   insertBuiltinTemplates(db);
   ensureTemplateDefaults(db);
+  backfillInvoiceTemplateSnapshots(db);
   ensureSchemaUpgrades(db);
   await seedAdminUser(db);
   storeSchemaVersion(db);
@@ -843,10 +993,9 @@ function findMaxPatternSequence(
   customerId?: string,
 ): number {
   const rows = customerId
-    ? db.query(
-      "SELECT invoice_number FROM invoices WHERE customer_id = ?",
-      [customerId],
-    )
+    ? db.query("SELECT invoice_number FROM invoices WHERE customer_id = ?", [
+      customerId,
+    ])
     : db.query("SELECT invoice_number FROM invoices");
   const regex = createSequencePatternRegex(pattern, token);
   let max = 0;
@@ -884,7 +1033,10 @@ export function getNextInvoiceNumber(customerId?: string): string {
     const hasCustomerNum = /\{CNUM\}/.test(cfg.pattern);
     const hasCustomerAbbreviation = /\{CUST\}/.test(cfg.pattern);
     if (
-      !hasSeq && !hasClientSeq && !hasCustomerNum && !hasCustomerAbbreviation
+      !hasSeq &&
+      !hasClientSeq &&
+      !hasCustomerNum &&
+      !hasCustomerAbbreviation
     ) {
       return expanded;
     }
@@ -919,11 +1071,7 @@ export function getNextInvoiceNumber(customerId?: string): string {
     }
     if (hasClientSeq) {
       // {CSEQ}: counter scoped to this customer's own invoices
-      const next = findMaxPatternSequence(
-        cfg.pattern,
-        "CSEQ",
-        customerId,
-      ) + 1;
+      const next = findMaxPatternSequence(cfg.pattern, "CSEQ", customerId) + 1;
       result = result.replace(/\{CSEQ\}/g, String(next).padStart(3, "0"));
     }
     return result;
