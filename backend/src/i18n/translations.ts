@@ -5,6 +5,7 @@ import ptBrRaw from "./locales/pt-br.json" with { type: "json" };
 
 export type InvoiceLabels = {
   invoiceTitle: string;
+  receiptTitle: string;
   invoiceNumberLabel: string;
   invoiceNumberShortLabel: string;
   invoiceDateLabel: string;
@@ -45,6 +46,7 @@ export type InvoiceLabels = {
 
 const REQUIRED_KEYS = [
   "invoiceTitle",
+  "receiptTitle",
   "invoiceNumberLabel",
   "invoiceNumberShortLabel",
   "invoiceDateLabel",
