@@ -2,7 +2,7 @@ import type { PageServerLoad, Actions } from "./$types";
 import { backendGet, backendDelete, backendPost } from "$lib/backend";
 import { fail, redirect } from "@sveltejs/kit";
 
-export const load: PageServerLoad = async ({ locals, url }) => {
+export const load: PageServerLoad = async ({ locals }) => {
   const auth = locals.authHeader;
 
   if (!auth) {
@@ -61,7 +61,6 @@ export const load: PageServerLoad = async ({ locals, url }) => {
     xmlProfiles,
     error,
     hasTemplates: templates.length > 0,
-    selectedTemplateId: url.searchParams.get("template") || "",
   };
 };
 
