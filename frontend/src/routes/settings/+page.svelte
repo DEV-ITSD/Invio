@@ -44,6 +44,7 @@
   let demoMode = $derived((data as any)?.demoMode === true || (data as any)?.demoMode === "true");
   let requestedSection = $derived(page.url.searchParams.get("section") || "company");
   let section = $derived(requestedSection === "security" && demoMode ? "company" : requestedSection);
+  let selectedTemplateId = $derived(page.url.searchParams.get("template") || "");
   let canUpdateSettings = $derived(true); // TODO: user permissions
 
   // Keep settings synced if data.settings changes from an external invalidation
@@ -317,7 +318,7 @@
       </div>
     {:else if section === "templates"}
       <div class="bg-base-100 rounded-box border-base-200 w-full border p-6">
-        <TemplateOptionsManager templates={data.templates} selectedTemplateId={data.selectedTemplateId} previewLocale={settings.locale || "en"} />
+        <TemplateOptionsManager templates={data.templates} {selectedTemplateId} previewLocale={settings.locale || "en"} />
       </div>
     {:else if section === "security"}
       <div class="bg-base-100 rounded-box border-base-200 max-w-4xl space-y-6 border p-6">
