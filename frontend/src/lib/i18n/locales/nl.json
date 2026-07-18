@@ -247,6 +247,8 @@
   "Outstanding": "Openstaand",
   "Overdue": "Achterstallig",
   "PDF": "PDF",
+  "PDF Name": "Naam voor PDF",
+  "PDF name help": "Letters, cijfers, spaties en koppeltekens; wordt gebruikt als eerste deel van de PDF-bestandsnaam",
   "Paid": "Betaald",
   "Password": "Wachtwoord",
   "Payment Methods": "Betaalmethoden",
