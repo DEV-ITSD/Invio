@@ -316,8 +316,8 @@
         <ProductOptionsManager productCategories={data.productCategories} productUnits={data.productUnits} />
       </div>
     {:else if section === "templates"}
-      <div class="bg-base-100 rounded-box border-base-200 max-w-4xl border p-6">
-        <TemplateOptionsManager templates={data.templates} />
+      <div class="bg-base-100 rounded-box border-base-200 w-full border p-6">
+        <TemplateOptionsManager templates={data.templates} selectedTemplateId={data.selectedTemplateId} previewLocale={settings.locale || "en"} />
       </div>
     {:else if section === "security"}
       <div class="bg-base-100 rounded-box border-base-200 max-w-4xl space-y-6 border p-6">
