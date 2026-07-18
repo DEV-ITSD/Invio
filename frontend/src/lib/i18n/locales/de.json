@@ -247,6 +247,8 @@
   "Outstanding": "Offen",
   "Overdue": "Überfällig",
   "PDF": "PDF",
+  "PDF Name": "Name für PDF",
+  "PDF name help": "Buchstaben, Ziffern, Leerzeichen und Bindestriche; wird als erster Teil des PDF-Dateinamens verwendet",
   "Paid": "Bezahlt",
   "Password": "Passwort",
   "Payment Methods": "Zahlungsmethoden",

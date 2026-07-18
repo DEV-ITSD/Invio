@@ -187,6 +187,8 @@
   "Optionally record how this invoice was paid.": "Optionally record how this invoice was paid.",
   "Outstanding": "Outstanding",
   "Overdue": "Overdue",
+  "PDF Name": "PDF Name",
+  "PDF name help": "Letters, numbers, spaces, and hyphens; used as the first part of downloaded PDF filenames",
   "Paid": "Paid",
   "Paid with": "Paid with",
   "Password": "Password",

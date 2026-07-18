@@ -13,6 +13,7 @@ export interface Customer {
   createdAt: Date;
   customerNumber?: number; // permanent sequential number, assigned at creation
   customerAbbreviation?: string; // 1-3 uppercase alphanumeric characters
+  pdfName?: string; // safe customer-specific prefix used for downloaded PDF filenames
 }
 
 export interface Product {
@@ -322,6 +323,7 @@ export interface CreateCustomerRequest {
   countryCode?: string; // ISO alpha-2
   taxId?: string;
   customerAbbreviation?: string;
+  pdfName?: string;
 }
 
 export interface CreateProductRequest {
@@ -373,6 +375,9 @@ export interface TemplateContext {
   status: string;
   documentType: InvoiceDocumentType;
   documentTitle: string;
+  isInvoice: boolean;
+  isReceipt: boolean;
+  showPaymentDetails: boolean;
 
   // Customer info
   customerName: string;

@@ -163,6 +163,7 @@ function ensureCustomerColumns(database: DB): void {
   addColumnIfMissing(database, "customers", "postal_code", "TEXT");
   addColumnIfMissing(database, "customers", "customer_number", "INTEGER");
   addColumnIfMissing(database, "customers", "customer_abbreviation", "TEXT");
+  addColumnIfMissing(database, "customers", "pdf_name", "TEXT");
   database.execute(
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_abbreviation_unique ON customers(customer_abbreviation COLLATE NOCASE) WHERE customer_abbreviation IS NOT NULL",
   );
@@ -649,12 +650,12 @@ function insertBuiltinTemplates(database: DB): void {
           const activeId = String((existing[0] as unknown[])[1] ?? "");
           const activeRows = activeId
             ? (database.query(
-              "SELECT is_builtin FROM template_versions WHERE id = ?",
-              [activeId],
-            ) as unknown[][])
+                "SELECT is_builtin FROM template_versions WHERE id = ?",
+                [activeId],
+              ) as unknown[][])
             : [];
-          const shouldActivate = activeRows.length === 0 ||
-            Boolean(activeRows[0][0]);
+          const shouldActivate =
+            activeRows.length === 0 || Boolean(activeRows[0][0]);
           if (shouldActivate) {
             database.query(
               "UPDATE templates SET name = ?, html = ?, active_version_id = ?, updated_at = ? WHERE id = ?",
@@ -705,9 +706,9 @@ function backfillInvoiceTemplateSnapshots(database: DB): void {
     const requestedId = selectedRows.length ? String(selectedRows[0][0]) : "";
     let templateRows = requestedId
       ? (database.query(
-        "SELECT id, active_version_id, html FROM templates WHERE id = ? LIMIT 1",
-        [requestedId],
-      ) as unknown[][])
+          "SELECT id, active_version_id, html FROM templates WHERE id = ? LIMIT 1",
+          [requestedId],
+        ) as unknown[][])
       : [];
     if (templateRows.length === 0) {
       templateRows = database.query(
@@ -749,12 +750,10 @@ async function seedAdminUser(database: DB): Promise<void> {
       [id, username, username, passwordHash, now, now],
     );
 
-    for (
-      const [resource, actions] of Object.entries(RESOURCE_ACTIONS) as [
-        Resource,
-        readonly Action[],
-      ][]
-    ) {
+    for (const [resource, actions] of Object.entries(RESOURCE_ACTIONS) as [
+      Resource,
+      readonly Action[],
+    ][]) {
       for (const action of actions) {
         database.query(
           "INSERT INTO user_permissions (id, user_id, resource, action) VALUES (?, ?, ?, ?)",
@@ -816,8 +815,7 @@ export async function resetDatabaseFromDemo(): Promise<void> {
     throw new Error("DEMO_MODE is true but DEMO_DB_PATH is not set.");
   }
   const demoPath = resolvePath(demoDb);
-  const tempPath =
-    `${activePath}.demo-reset-${Date.now()}-${crypto.randomUUID()}.tmp`;
+  const tempPath = `${activePath}.demo-reset-${Date.now()}-${crypto.randomUUID()}.tmp`;
 
   try {
     closeDatabase();
@@ -950,13 +948,13 @@ function getNumberingSettings(): {
 function findMaxSequence(likePrefix: string, customerId?: string): number {
   const rows = customerId
     ? db.query(
-      "SELECT invoice_number FROM invoices WHERE invoice_number LIKE ? AND customer_id = ?",
-      [likePrefix + "%", customerId],
-    )
+        "SELECT invoice_number FROM invoices WHERE invoice_number LIKE ? AND customer_id = ?",
+        [likePrefix + "%", customerId],
+      )
     : db.query(
-      "SELECT invoice_number FROM invoices WHERE invoice_number LIKE ?",
-      [likePrefix + "%"],
-    );
+        "SELECT invoice_number FROM invoices WHERE invoice_number LIKE ?",
+        [likePrefix + "%"],
+      );
   const escaped = likePrefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const re = new RegExp(`^${escaped}(\\d+).*?$`);
   let max = 0;
@@ -1001,8 +999,8 @@ function findMaxPatternSequence(
 ): number {
   const rows = customerId
     ? db.query("SELECT invoice_number FROM invoices WHERE customer_id = ?", [
-      customerId,
-    ])
+        customerId,
+      ])
     : db.query("SELECT invoice_number FROM invoices");
   const regex = createSequencePatternRegex(pattern, token);
   let max = 0;

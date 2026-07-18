@@ -298,6 +298,8 @@
       </div>
       {{/notes}}
 
+      <!-- Invoice-only payment footer -->
+      {{#isInvoice}}
       <div class="footer">
         {{#paymentTerms}}
         <p><strong>{{labels.paymentTermsLabel}}:</strong> {{paymentTerms}}</p>
@@ -311,6 +313,7 @@
         <p>{{labels.taxIdLabel}}: {{companyTaxId}}</p>
         {{/companyTaxId}}
       </div>
+      {{/isInvoice}}
     </div>
   </body>
 </html>

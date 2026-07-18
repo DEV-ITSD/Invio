@@ -59,6 +59,14 @@
       </div>
 
       <div class="form-control w-full">
+        <label class="label pb-1" for="pdfName">
+          <span class="label-text">{t("PDF Name")}</span>
+        </label>
+        <input type="text" id="pdfName" name="pdfName" maxlength="80" placeholder="Muster AG" class="input input-sm input-bordered w-full" value={c.pdfName || ""} />
+        <div class="label pt-1"><span class="label-text-alt">{t("PDF name help")}</span></div>
+      </div>
+
+      <div class="form-control w-full">
         <label class="label pb-1" for="contactName">
           <span class="label-text">{t("Contact Name")}</span>
         </label>

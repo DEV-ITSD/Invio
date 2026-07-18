@@ -64,6 +64,10 @@
         <div class="font-medium">{c.customerAbbreviation || "-"}</div>
       </div>
       <div>
+        <div class="mb-1 text-sm opacity-70">{t("PDF Name")}</div>
+        <div class="font-medium">{c.pdfName || "-"}</div>
+      </div>
+      <div>
         <div class="mb-1 text-sm opacity-70">{t("Contact Name")}</div>
         <div class="font-medium">{c.contactName || "-"}</div>
       </div>

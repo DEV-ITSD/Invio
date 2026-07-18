@@ -325,7 +325,8 @@
   </div>
   {{/notes}}
 
-  <!-- ── Footer ───────────────────────────────────────── -->
+  <!-- ── Invoice-only payment footer ─────────────────── -->
+  {{#isInvoice}}
   <div class="footer">
     {{#paymentTerms}}
     <div class="ft-col">
@@ -346,6 +347,7 @@
     </div>
     {{/bankAccount}}
   </div>
+  {{/isInvoice}}
 
 </div><!-- /wrap -->
 </body>

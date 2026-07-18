@@ -38,6 +38,9 @@ export const actions: Actions = {
     const customerAbbreviation = String(form.get("customerAbbreviation") || "")
       .trim()
       .toUpperCase();
+    const pdfName = String(form.get("pdfName") || "")
+      .trim()
+      .replace(/ +/g, " ");
 
     if (!name) {
       return fail(400, { error: "Name is required" });
@@ -45,6 +48,16 @@ export const actions: Actions = {
     if (customerAbbreviation && !/^[A-Z0-9]{1,3}$/.test(customerAbbreviation)) {
       return fail(400, {
         error: "Customer abbreviation must contain 1 to 3 letters or numbers",
+      });
+    }
+    if (
+      pdfName &&
+      (pdfName.length > 80 ||
+        !/^[\p{L}\p{N}]+(?:[ -][\p{L}\p{N}]+)*$/u.test(pdfName))
+    ) {
+      return fail(400, {
+        error:
+          "PDF name may only contain letters, numbers, spaces, and hyphens",
       });
     }
 
@@ -61,6 +74,7 @@ export const actions: Actions = {
         taxId: taxId || undefined,
         countryCode: countryCode || undefined,
         customerAbbreviation: customerAbbreviation || undefined,
+        pdfName: pdfName || undefined,
       });
     } catch (e: any) {
       if (e && typeof e === "object" && "status" in e && "location" in e)

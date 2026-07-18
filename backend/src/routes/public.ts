@@ -4,6 +4,10 @@ import { normalize, relative, resolve } from "std/path";
 import { getInvoiceByShareToken } from "../controllers/invoices.ts";
 import { getSettings } from "../controllers/settings.ts";
 import { buildInvoiceHTML, generatePDF } from "../utils/pdf.ts";
+import {
+  attachmentContentDisposition,
+  buildInvoicePdfFilename,
+} from "../utils/pdfFilename.ts";
 import { generateUBLInvoiceXML } from "../utils/ubl.ts"; // legacy direct import (will be removed after deprecation window)
 import { generateInvoiceXML, listXMLProfiles } from "../utils/xmlProfiles.ts";
 import { resolveInDataRoot } from "../utils/dataPaths.ts";
@@ -130,8 +134,8 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
     companyAddress: settingsMap.companyAddress || "",
     companyCity: settingsMap.companyCity || "",
     companyPostalCode: settingsMap.companyPostalCode || "",
-    companyCountryCode: settingsMap.companyCountryCode ||
-      settingsMap.countryCode || "",
+    companyCountryCode:
+      settingsMap.companyCountryCode || settingsMap.countryCode || "",
     postalCityFormat: settingsMap.postalCityFormat || "auto",
     companyEmail: settingsMap.companyEmail || "",
     companyPhone: settingsMap.companyPhone || "",
@@ -150,8 +154,8 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
 
   // Use template/highlight from settings only (no query overrides)
   const highlight = settingsMap.highlight ?? undefined;
-  let selectedTemplateId: string | undefined = settingsMap.templateId
-    ?.toLowerCase();
+  let selectedTemplateId: string | undefined =
+    settingsMap.templateId?.toLowerCase();
   if (
     selectedTemplateId === "professional" ||
     selectedTemplateId === "professional-modern"
@@ -181,6 +185,11 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
         locale: settingsMap.locale,
       },
     );
+    const pdfFilename = buildInvoicePdfFilename(
+      invoice,
+      businessSettings,
+      settingsMap.locale,
+    );
     // Detect embedded attachments for diagnostics
     let hasAttachment = false;
     let attachmentNames: string[] = [];
@@ -200,15 +209,13 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
     return new Response(pdfBuffer, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="invoice-${
-          invoice.invoiceNumber || shareToken
-        }.pdf"`,
+        "Content-Disposition": attachmentContentDisposition(pdfFilename),
         "X-Robots-Tag": "noindex",
         ...(hasAttachment
           ? {
-            "X-Embedded-XML": "true",
-            "X-Embedded-XML-Names": attachmentNames.join(","),
-          }
+              "X-Embedded-XML": "true",
+              "X-Embedded-XML-Names": attachmentNames.join(","),
+            }
           : { "X-Embedded-XML": "false" }),
       },
     });
@@ -253,8 +260,8 @@ publicRoutes.get("/public/invoices/:share_token/html", async (c) => {
     companyAddress: settingsMap.companyAddress || "",
     companyCity: settingsMap.companyCity || "",
     companyPostalCode: settingsMap.companyPostalCode || "",
-    companyCountryCode: settingsMap.companyCountryCode ||
-      settingsMap.countryCode || "",
+    companyCountryCode:
+      settingsMap.companyCountryCode || settingsMap.countryCode || "",
     postalCityFormat: settingsMap.postalCityFormat || "auto",
     companyEmail: settingsMap.companyEmail || "",
     companyPhone: settingsMap.companyPhone || "",
@@ -273,8 +280,8 @@ publicRoutes.get("/public/invoices/:share_token/html", async (c) => {
 
   // Use template/highlight from settings only (no query overrides)
   const highlight = settingsMap.highlight ?? undefined;
-  let selectedTemplateId: string | undefined = settingsMap.templateId
-    ?.toLowerCase();
+  let selectedTemplateId: string | undefined =
+    settingsMap.templateId?.toLowerCase();
   if (
     selectedTemplateId === "professional" ||
     selectedTemplateId === "professional-modern"
@@ -398,8 +405,8 @@ publicRoutes.get("/public/invoices/:share_token/xml", async (c) => {
   };
 
   const url = new URL(c.req.url);
-  const profileParam = url.searchParams.get("profile") ||
-    settingsMap.xmlProfileId || undefined;
+  const profileParam =
+    url.searchParams.get("profile") || settingsMap.xmlProfileId || undefined;
   const { xml, profile } = generateInvoiceXML(
     profileParam,
     invoice,
