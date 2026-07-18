@@ -29,6 +29,8 @@ export interface Product {
   updatedAt: Date;
 }
 
+export type InvoiceDocumentType = "invoice" | "receipt";
+
 export interface Invoice {
   id: string;
   invoiceNumber: string;
@@ -37,6 +39,7 @@ export interface Invoice {
   dueDate?: Date;
   currency: string;
   status: "draft" | "sent" | "complete" | "paid" | "overdue" | "voided";
+  documentType: InvoiceDocumentType;
 
   // Totals
   subtotal: number;
@@ -140,6 +143,8 @@ export interface BusinessSettings {
   paymentTerms?: string;
   defaultNotes?: string;
   locale?: string;
+  invoiceDocumentTitle?: string;
+  receiptDocumentTitle?: string;
 }
 
 // Normalized tax types
@@ -264,6 +269,7 @@ export interface CreateInvoiceRequest {
   dueDate?: string | Date;
   currency?: string;
   status?: "draft" | "sent" | "complete" | "paid" | "overdue" | "voided";
+  documentType?: InvoiceDocumentType;
   templateId?: string;
   templateVersionId?: string;
 
@@ -365,6 +371,8 @@ export interface TemplateContext {
   dueDate?: string;
   currency: string;
   status: string;
+  documentType: InvoiceDocumentType;
+  documentTitle: string;
 
   // Customer info
   customerName: string;
