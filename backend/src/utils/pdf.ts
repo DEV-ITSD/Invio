@@ -21,6 +21,7 @@ import {
 } from "./logoStorage.ts";
 import {
   getTemplateById,
+  getTemplateVersionById,
   renderTemplate as renderTpl,
 } from "../controllers/templates.ts";
 import { getDefaultTemplate } from "../controllers/templates.ts";
@@ -202,9 +203,9 @@ function normalizeLogoUrlForRender(
 type NumberFormat = "comma" | "period" | "swiss";
 
 function formatMoney(
-    value: number,
-    currency: string,
-    numberFormat: NumberFormat = "comma",
+  value: number,
+  currency: string,
+  numberFormat: NumberFormat = "comma",
 ): string {
   let locale: string;
 
@@ -509,24 +510,39 @@ export function buildInvoiceHTML(
   const hl = normalizeHex(highlight) || "#2563eb";
   const hlLight = lighten(hl, 0.86);
 
-  let template;
-  if (templateId) {
+  let templateHtml = invoice.templateHtmlSnapshot;
+  if (!templateHtml && invoice.templateVersionId) {
     try {
-      template = getTemplateById(templateId);
+      templateHtml = getTemplateVersionById(invoice.templateVersionId)?.html;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      console.warn(`Failed to load template ${templateId}: ${message}`);
+      console.warn(
+        `Failed to load template version ${invoice.templateVersionId}: ${message}`,
+      );
     }
   }
 
-  const fallbackTemplate = template ?? getDefaultTemplate();
-  if (!fallbackTemplate) {
+  let template;
+  const selectedTemplateId = invoice.templateId || templateId;
+  if (!templateHtml && selectedTemplateId) {
+    try {
+      template = getTemplateById(selectedTemplateId);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`Failed to load template ${selectedTemplateId}: ${message}`);
+    }
+  }
+
+  const fallbackTemplate = templateHtml
+    ? undefined
+    : (template ?? getDefaultTemplate());
+  if (!templateHtml && !fallbackTemplate) {
     throw new Error(
       "No invoice templates available. Ensure database migrations have seeded templates.",
     );
   }
 
-  return renderTpl(fallbackTemplate.html, {
+  return renderTpl(templateHtml || fallbackTemplate!.html, {
     ...ctx,
     highlightColor: hl,
     highlightColorLight: hlLight,
