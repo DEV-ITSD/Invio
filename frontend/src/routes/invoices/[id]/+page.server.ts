@@ -28,9 +28,16 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
     const allowProtectedInvoiceChanges =
       String(settings.allowProtectedInvoiceChanges || "false").toLowerCase() ===
       "true";
+    const invoice = invoiceRes.value as Record<string, unknown>;
+    const configuredDocumentTitle = String(
+      invoice.documentType === "receipt"
+        ? settings.receiptDocumentTitle || ""
+        : settings.invoiceDocumentTitle || "",
+    ).trim();
     const showPublishedBanner = url.searchParams.get("published") === "1";
     return {
       invoice: invoiceRes.value,
+      documentTitle: configuredDocumentTitle || null,
       showPublishedBanner,
       allowProtectedInvoiceChanges,
       emailEnabled: Boolean(env.SMTP_HOST && env.EMAIL_FROM_ADDRESS),
@@ -115,18 +122,24 @@ export const actions: Actions = {
           .filter((e) => e.includes("@"));
 
         if (to.length === 0) {
-          return fail(400, { emailError: "Enter at least one valid recipient email address." });
+          return fail(400, {
+            emailError: "Enter at least one valid recipient email address.",
+          });
         }
         if (!subject) {
           return fail(400, { emailError: "Subject is required." });
         }
 
         try {
-          await backendPost(`/api/v1/invoices/${id}/send-email`, locals.authHeader, {
-            to,
-            subject,
-            message,
-          });
+          await backendPost(
+            `/api/v1/invoices/${id}/send-email`,
+            locals.authHeader,
+            {
+              to,
+              subject,
+              message,
+            },
+          );
           return { emailSent: true, emailRecipients: to };
         } catch (e) {
           return fail(502, { emailError: `Failed to send: ${String(e)}` });

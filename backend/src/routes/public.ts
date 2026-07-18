@@ -143,6 +143,8 @@ publicRoutes.get("/public/invoices/:share_token/pdf", async (c) => {
     bankAccount: settingsMap.bankAccount || "",
     paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
     defaultNotes: settingsMap.defaultNotes || "",
+    invoiceDocumentTitle: settingsMap.invoiceDocumentTitle || undefined,
+    receiptDocumentTitle: settingsMap.receiptDocumentTitle || undefined,
     locale: settingsMap.locale || undefined,
   };
 
@@ -264,6 +266,8 @@ publicRoutes.get("/public/invoices/:share_token/html", async (c) => {
     bankAccount: settingsMap.bankAccount || "",
     paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
     defaultNotes: settingsMap.defaultNotes || "",
+    invoiceDocumentTitle: settingsMap.invoiceDocumentTitle || undefined,
+    receiptDocumentTitle: settingsMap.receiptDocumentTitle || undefined,
     locale: settingsMap.locale || undefined,
   };
 
@@ -335,6 +339,8 @@ publicRoutes.get("/public/invoices/:share_token/ubl.xml", async (c) => {
     bankAccount: settingsMap.bankAccount || "",
     paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
     defaultNotes: settingsMap.defaultNotes || "",
+    invoiceDocumentTitle: settingsMap.invoiceDocumentTitle || undefined,
+    receiptDocumentTitle: settingsMap.receiptDocumentTitle || undefined,
   };
 
   const xml = generateUBLInvoiceXML(invoice, businessSettings, {
@@ -386,6 +392,8 @@ publicRoutes.get("/public/invoices/:share_token/xml", async (c) => {
     bankAccount: settingsMap.bankAccount || "",
     paymentTerms: settingsMap.paymentTerms || "Due in 30 days",
     defaultNotes: settingsMap.defaultNotes || "",
+    invoiceDocumentTitle: settingsMap.invoiceDocumentTitle || undefined,
+    receiptDocumentTitle: settingsMap.receiptDocumentTitle || undefined,
     companyCountryCode: settingsMap.companyCountryCode || "",
   };
 

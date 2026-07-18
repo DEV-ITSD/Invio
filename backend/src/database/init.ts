@@ -209,6 +209,12 @@ function ensureInvoiceColumns(database: DB): void {
   addColumnIfMissing(database, "invoices", "template_id", "TEXT");
   addColumnIfMissing(database, "invoices", "template_version_id", "TEXT");
   addColumnIfMissing(database, "invoices", "template_html_snapshot", "TEXT");
+  addColumnIfMissing(
+    database,
+    "invoices",
+    "document_type",
+    "TEXT NOT NULL DEFAULT 'invoice'",
+  );
 }
 
 function ensureTemplateVersioning(database: DB): void {
@@ -498,7 +504,8 @@ function migrateInvoicesForVoided(database: DB): void {
         locale TEXT,
         template_id TEXT,
         template_version_id TEXT,
-        template_html_snapshot TEXT
+        template_html_snapshot TEXT,
+        document_type TEXT NOT NULL DEFAULT 'invoice'
       )
     `);
 

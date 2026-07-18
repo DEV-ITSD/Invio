@@ -1,5 +1,6 @@
 {
   "invoiceTitle": "Factuur",
+  "receiptTitle": "Kwitantie",
   "invoiceNumberLabel": "Factuurnummer",
   "invoiceNumberShortLabel": "Factuur #",
   "invoiceDateLabel": "Factuurdatum",

@@ -15,6 +15,7 @@ import {
   UpdateInvoiceRequest,
 } from "../types/index.ts";
 import { generateShareToken, generateUUID } from "../utils/uuid.ts";
+import { normalizeDocumentType } from "../utils/documentType.ts";
 
 type LineTaxInput = {
   percent: number;
@@ -333,6 +334,7 @@ export const createInvoice = (
     dueDate,
     currency,
     status: data.status || "draft",
+    documentType: normalizeDocumentType(data.documentType),
     templateId: templateSelection.template.id,
     templateVersionId: templateSelection.version.id,
     templateHtmlSnapshot: templateSelection.html,
@@ -365,8 +367,8 @@ export const createInvoice = (
       subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
       payment_terms, notes, share_token, created_at, updated_at,
       prices_include_tax, rounding_mode, template_id, template_version_id,
-      template_html_snapshot
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      template_html_snapshot, document_type
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       invoice.id,
       invoice.invoiceNumber,
@@ -391,6 +393,7 @@ export const createInvoice = (
       invoice.templateId,
       invoice.templateVersionId,
       invoice.templateHtmlSnapshot,
+      invoice.documentType,
     ],
   );
   recordStatusChange(db, invoiceId, invoice.status || "draft");
@@ -539,7 +542,7 @@ export const getInvoices = (): Invoice[] => {
            subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
            payment_terms, notes, share_token, created_at, updated_at,
            prices_include_tax, rounding_mode, template_id, template_version_id,
-           template_html_snapshot
+           template_html_snapshot, document_type
     FROM invoices
     ORDER BY created_at DESC
   `);
@@ -555,7 +558,7 @@ export const getInvoiceById = (id: string): InvoiceWithDetails | null => {
            subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
            payment_terms, notes, share_token, created_at, updated_at,
            prices_include_tax, rounding_mode, template_id, template_version_id,
-           template_html_snapshot
+           template_html_snapshot, document_type
     FROM invoices
     WHERE id = ?
   `,
@@ -661,7 +664,7 @@ export const getInvoiceByShareToken = (
            subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
            payment_terms, notes, share_token, created_at, updated_at,
            prices_include_tax, rounding_mode, template_id, template_version_id,
-           template_html_snapshot
+           template_html_snapshot, document_type
     FROM invoices
     WHERE share_token = ?
   `,
@@ -808,6 +811,7 @@ export const updateInvoice = async (
       "invoiceNumber",
       "templateId",
       "templateVersionId",
+      "documentType",
       "subtotal",
       "total",
     ];
@@ -880,6 +884,9 @@ export const updateInvoice = async (
   }
 
   const updatedAt = new Date();
+  const nextDocumentType = data.documentType === undefined
+    ? null
+    : normalizeDocumentType(data.documentType);
   const templateSelection =
     data.templateId !== undefined || data.templateVersionId !== undefined
       ? resolveTemplateSelection(
@@ -909,7 +916,8 @@ export const updateInvoice = async (
       invoice_number = COALESCE(?, invoice_number),
       template_id = COALESCE(?, template_id),
       template_version_id = COALESCE(?, template_version_id),
-      template_html_snapshot = COALESCE(?, template_html_snapshot)
+      template_html_snapshot = COALESCE(?, template_html_snapshot),
+      document_type = COALESCE(?, document_type)
     WHERE id = ?
   `,
       [
@@ -939,6 +947,7 @@ export const updateInvoice = async (
         templateSelection?.template.id ?? null,
         templateSelection?.version.id ?? null,
         templateSelection?.html ?? null,
+        nextDocumentType,
         id,
       ],
     );
@@ -1178,8 +1187,8 @@ export const duplicateInvoice = async (
       subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
       payment_terms, notes, share_token, created_at, updated_at,
       prices_include_tax, rounding_mode, template_id, template_version_id,
-      template_html_snapshot
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      template_html_snapshot, document_type
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
       [
         newId,
@@ -1205,6 +1214,7 @@ export const duplicateInvoice = async (
         templateSelection.template.id,
         templateSelection.version.id,
         templateSelection.html,
+        original.documentType,
       ],
     );
     // Copy items
@@ -1422,6 +1432,7 @@ function mapRowToInvoice(row: unknown[]): Invoice {
     templateId: row[20] ? String(row[20]) : undefined,
     templateVersionId: row[21] ? String(row[21]) : undefined,
     templateHtmlSnapshot: row[22] ? String(row[22]) : undefined,
+    documentType: normalizeDocumentType(row[23]),
   };
 }
 

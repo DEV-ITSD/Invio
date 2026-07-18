@@ -568,6 +568,19 @@
               <input type="checkbox" class="checkbox" bind:checked={settings.allowProtectedInvoiceChanges} disabled={!canUpdateSettings} />
               <span class="label-text">{t("Allow editing and deleting sent/paid invoices")}</span>
             </label>
+            <div class="divider">{t("Document Titles")}</div>
+            <p class="text-sm opacity-70">{t("Customize the titles shown on invoices and receipts. Leave a field blank to use the translated default.")}</p>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label class="form-control">
+                <div class="label"><span class="label-text">{t("Invoice title")}</span></div>
+                <input type="text" class="input input-bordered w-full" bind:value={settings.invoiceDocumentTitle} placeholder={t("Invoice")} maxlength="60" disabled={!canUpdateSettings} />
+              </label>
+              <label class="form-control">
+                <div class="label"><span class="label-text">{t("Receipt title")}</span></div>
+                <input type="text" class="input input-bordered w-full" bind:value={settings.receiptDocumentTitle} placeholder={t("Receipt")} maxlength="60" disabled={!canUpdateSettings} />
+              </label>
+            </div>
+            <div class="divider"></div>
             <label class="form-control"
               ><div class="label">
                 <span class="label-text">{t("Payment Methods")}</span>

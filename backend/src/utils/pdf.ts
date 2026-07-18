@@ -26,6 +26,10 @@ import {
 } from "../controllers/templates.ts";
 import { getDefaultTemplate } from "../controllers/templates.ts";
 import { getInvoiceLabels } from "../i18n/translations.ts";
+import {
+  normalizeDocumentType,
+  resolveDocumentTitle,
+} from "./documentType.ts";
 // pdf-lib is used to embed XML attachments and tweak metadata after rendering
 
 // ---- Basic color helpers ----
@@ -291,6 +295,9 @@ function buildContext(
 ): TemplateContext & { logoUrl?: string; brandLogoLeft?: boolean } {
   const requestedLocale = localeOverride ?? invoice.locale ?? settings?.locale;
   const { locale: resolvedLocale, labels } = getInvoiceLabels(requestedLocale);
+  const documentType = normalizeDocumentType(invoice.documentType);
+  const documentTitle = resolveDocumentTitle(documentType, labels, settings);
+  const renderedLabels = { ...labels, invoiceTitle: documentTitle };
   const currency = invoice.currency || settings?.currency || "USD";
   const companyPostalCity = formatPostalCityLine(
     settings?.companyPostalCode,
@@ -354,6 +361,8 @@ function buildContext(
     dueDate: formatDate(invoice.dueDate, dateFormat),
     currency,
     status: invoice.status,
+    documentType,
+    documentTitle,
 
     // Customer
     customerName: invoice.customer.name,
@@ -419,7 +428,7 @@ function buildContext(
 
     // Internationalization
     locale: resolvedLocale,
-    labels,
+    labels: renderedLabels,
 
     // Non-mustache extras consumed by templates
     // Prefer inlined data URL if available; otherwise pass through the provided logo value

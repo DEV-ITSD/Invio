@@ -72,6 +72,7 @@ CREATE TABLE invoices (
   template_id TEXT,
   template_version_id TEXT,
   template_html_snapshot TEXT,
+  document_type TEXT NOT NULL DEFAULT 'invoice',
   
   -- System fields
   share_token TEXT UNIQUE NOT NULL,

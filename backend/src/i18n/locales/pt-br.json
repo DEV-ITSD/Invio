@@ -1,5 +1,6 @@
 {
   "invoiceTitle": "Fatura",
+  "receiptTitle": "Recibo",
   "invoiceNumberLabel": "Número da Fatura",
   "invoiceNumberShortLabel": "Fatura nº",
   "invoiceDateLabel": "Data da Fatura",
