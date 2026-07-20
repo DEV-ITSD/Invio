@@ -29,6 +29,7 @@
     issueDate: initInvoice?.issueDate ? new Date(initInvoice.issueDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
     dueDate: initInvoice?.dueDate ? new Date(initInvoice.dueDate).toISOString().slice(0, 10) : "",
     taxMode: initInvoice?.taxMode || "invoice",
+    taxText: initInvoice?.taxText || "",
     taxRate: initInvoice?.taxRate || 0,
     pricesIncludeTax: initInvoice?.pricesIncludeTax ? "true" : "false",
     roundingMode: initInvoice?.roundingMode || "line",
@@ -43,6 +44,8 @@
           id: generateId(),
           unit: i.unit || "",
           productId: i.productId || "",
+          taxPercent: i.taxPercent ?? i.taxes?.[0]?.percent ?? 0,
+          taxDefinitionId: i.taxes?.[0]?.taxDefinitionId || "",
         }))
       : [
           {
@@ -53,6 +56,7 @@
             unit: "",
             unitPrice: 0,
             taxPercent: 0,
+            taxDefinitionId: "",
             notes: "",
           },
         ],
@@ -107,6 +111,7 @@
       unit: "",
       unitPrice: 0,
       taxPercent: 0,
+      taxDefinitionId: "",
       notes: "",
     });
   }
@@ -126,6 +131,7 @@
       const taxDef = taxDefinitions.find((t: any) => t.id === product.taxDefinitionId);
       if (taxDef) {
         item.taxPercent = Number(taxDef.percent || 0);
+        item.taxDefinitionId = taxDef.id;
       }
     }
   }
@@ -201,9 +207,11 @@
 
   let subtotal = $derived(items.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0), 0));
   let tax = $derived(
-    form.taxMode === "invoice"
-      ? subtotal * ((Number(form.taxRate) || 0) / 100)
-      : items.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0) * ((Number(item.taxPercent) || 0) / 100), 0),
+    form.taxMode === "none"
+      ? 0
+      : form.taxMode === "invoice"
+        ? subtotal * ((Number(form.taxRate) || 0) / 100)
+        : items.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0) * ((Number(item.taxPercent) || 0) / 100), 0),
   );
   let total = $derived(form.pricesIncludeTax === "true" ? subtotal : subtotal + tax); // Simplified for visual parity
 
@@ -226,6 +234,15 @@
           unit: typeof i.unit === "string" ? i.unit.trim() : "",
           unitPrice: Number(i.unitPrice),
           taxPercent: Number(i.taxPercent || 0),
+          taxes:
+            form.taxMode === "line"
+              ? [
+                  {
+                    percent: Number(i.taxPercent || 0),
+                    taxDefinitionId: i.taxDefinitionId || undefined,
+                  },
+                ]
+              : undefined,
           notes: i.notes,
         })),
       };
@@ -431,6 +448,12 @@
         <span>{t("Subtotal")}:</span>
         <span>{subtotal.toFixed(2)}</span>
       </div>
+      {#if form.taxMode === "none" && form.taxText.trim()}
+        <div class="flex w-48 justify-between gap-3">
+          <span>{form.taxText}</span>
+          <span>0.00</span>
+        </div>
+      {/if}
       {#if tax > 0}
         <div class="flex w-48 justify-between">
           <span>{t("Tax")}:</span>
@@ -455,13 +478,21 @@
     >
   </div>
 
-  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
     <label class="form-control">
       <div class="label"><span class="label-text">{t("Tax Mode")}</span></div>
       <select class="select select-bordered w-full" bind:value={form.taxMode}>
         <option value="invoice">{t("Invoice total")}</option>
         <option value="line">{t("Per line")}</option>
+        <option value="none">{t("No tax")}</option>
       </select>
+    </label>
+
+    <label class="form-control">
+      <div class="label">
+        <span class="label-text">{t("Tax text")}</span>
+      </div>
+      <input type="text" class="input input-bordered w-full" bind:value={form.taxText} disabled={form.taxMode !== "none"} />
     </label>
 
     <label class="form-control" class:hidden={form.taxMode !== "invoice"}>

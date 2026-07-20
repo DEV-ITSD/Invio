@@ -27,6 +27,7 @@ import {
 import { getDefaultTemplate } from "../controllers/templates.ts";
 import { getInvoiceLabels } from "../i18n/translations.ts";
 import { normalizeDocumentType, resolveDocumentTitle } from "./documentType.ts";
+import { normalizeTaxMode } from "./taxMode.ts";
 // pdf-lib is used to embed XML attachments and tweak metadata after rendering
 
 // ---- Basic color helpers ----
@@ -307,9 +308,13 @@ function buildContext(
     settings?.taxLabel && String(settings.taxLabel).trim()
       ? String(settings.taxLabel).trim()
       : labels.taxLabel;
+  const taxMode = normalizeTaxMode(invoice.taxMode);
+  const taxText = taxMode === "none"
+    ? String(invoice.taxText || "").trim()
+    : "";
   // Build tax summary from normalized taxes if present
   let taxSummary =
-    invoice.taxes && invoice.taxes.length > 0
+    taxMode !== "none" && invoice.taxes && invoice.taxes.length > 0
       ? invoice.taxes.map((t) => ({
           label: `${taxLabel} ${t.percent}%`,
           percent: t.percent,
@@ -322,7 +327,11 @@ function buildContext(
         }))
       : undefined;
   // Fallback: synthesize a single-row summary from invoice-level taxRate
-  if ((!taxSummary || taxSummary.length === 0) && invoice.taxAmount > 0) {
+  if (
+    taxMode !== "none" &&
+    (!taxSummary || taxSummary.length === 0) &&
+    invoice.taxAmount > 0
+  ) {
     const percent = invoice.taxRate || 0;
     const taxableBase = Math.max(
       0,
@@ -413,6 +422,12 @@ function buildContext(
     total: formatMoney(invoice.total, currency, numberFormat || "comma"),
     taxSummary,
     hasTaxSummary: Boolean(taxSummary && taxSummary.length > 0),
+    taxMode,
+    taxText: taxText || undefined,
+    zeroTaxAmount: taxText
+      ? formatMoney(0, currency, numberFormat || "comma")
+      : undefined,
+    hasTaxText: Boolean(taxText),
     // Net subtotal (taxable base after discount, before tax) for convenience
     netSubtotal: formatMoney(
       Math.max(0, (invoice.subtotal || 0) - (invoice.discountAmount || 0)),
@@ -422,7 +437,7 @@ function buildContext(
 
     // Flags
     hasDiscount: invoice.discountAmount > 0,
-    hasTax: invoice.taxAmount > 0,
+    hasTax: taxMode !== "none" && invoice.taxAmount > 0,
 
     // Payment
     paymentTerms: showPaymentDetails

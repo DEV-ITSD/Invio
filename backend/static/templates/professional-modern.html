@@ -427,6 +427,12 @@
             <span class="totals-label">{{labels.subtotalLabel}}:</span>
             <span class="totals-value">{{subtotal}}</span>
           </div>
+          {{#hasTaxText}}
+          <div class="totals-row">
+            <span class="totals-label">{{taxText}}:</span>
+            <span class="totals-value">{{zeroTaxAmount}}</span>
+          </div>
+          {{/hasTaxText}}
           {{#hasDiscount}}
           <div class="totals-row">
             <span class="totals-label"

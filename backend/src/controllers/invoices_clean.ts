@@ -15,6 +15,9 @@ export const createInvoice = (data: Partial<Invoice>) => {
     dueDate: data.dueDate,
     currency: data.currency || "USD",
     status: data.status || "draft",
+    documentType: data.documentType || "invoice",
+    taxMode: data.taxMode || "invoice",
+    taxText: data.taxText,
 
     // Totals
     subtotal: data.subtotal || 0,

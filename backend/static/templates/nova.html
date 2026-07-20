@@ -274,6 +274,14 @@
             <span class="t-val">{{subtotal}}</span>
           </div>
         </div>
+        {{#hasTaxText}}
+        <div class="t-row">
+          <div class="t-row-inner">
+            <span class="t-lbl">{{taxText}}</span>
+            <span class="t-val">{{zeroTaxAmount}}</span>
+          </div>
+        </div>
+        {{/hasTaxText}}
         {{#hasDiscount}}
         <div class="t-row">
           <div class="t-row-inner">

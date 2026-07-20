@@ -31,11 +31,14 @@ export const updateSettings = (data: Record<string, string>) => {
     ].includes(key) && String(raw).trim() === "";
 
     if (shouldClear) {
-      // delete the setting row if present
-      db.query("DELETE FROM settings WHERE key = ?", [
-        key === "taxId" ? "companyTaxId" : key,
-      ]);
-      results.push({ key: key === "taxId" ? "companyTaxId" : key, value: "" });
+      // Persist an explicit empty value. Deleting the row would allow startup
+      // migrations to recreate a seeded default on the next container restart.
+      const storedKey = key === "taxId" ? "companyTaxId" : key;
+      db.query(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES (?, '')",
+        [storedKey],
+      );
+      results.push({ key: storedKey, value: "" });
       continue;
     }
 
