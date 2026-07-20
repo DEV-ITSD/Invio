@@ -16,6 +16,7 @@ import {
 } from "../types/index.ts";
 import { generateShareToken, generateUUID } from "../utils/uuid.ts";
 import { normalizeDocumentType } from "../utils/documentType.ts";
+import { normalizeTaxMode } from "../utils/taxMode.ts";
 
 type LineTaxInput = {
   percent: number;
@@ -274,14 +275,30 @@ export const createInvoice = (
   const defaultRoundingMode = String(settings.defaultRoundingMode || "line");
   const defaultTaxRate = Number(settings.defaultTaxRate || 0) || 0;
 
-  // Determine if per-line taxes are used
-  const hasPerLineTaxes =
+  // Determine the persisted tax mode. Older API clients that send line taxes
+  // without taxMode continue to be detected as per-line mode.
+  const itemsHavePerLineTaxes =
     Array.isArray(data.items) &&
     data.items.some(
       (i) =>
         Array.isArray((i as { taxes?: LineTaxInput[] }).taxes) &&
         ((i as { taxes?: LineTaxInput[] }).taxes?.length || 0) > 0,
     );
+  const taxMode = data.taxMode === undefined
+    ? itemsHavePerLineTaxes
+      ? "line"
+      : "invoice"
+    : normalizeTaxMode(data.taxMode);
+  const hasPerLineTaxes = taxMode === "line";
+  const effectiveTaxRate = taxMode === "invoice"
+    ? (typeof data.taxRate === "number" ? data.taxRate : defaultTaxRate) || 0
+    : 0;
+  const pricesIncludeTax = taxMode === "none"
+    ? false
+    : data.pricesIncludeTax ?? defaultPricesIncludeTax;
+  const taxText = taxMode === "none"
+    ? String(data.taxText ?? "").trim()
+    : "";
   let totals = { subtotal: 0, discountAmount: 0, taxAmount: 0, total: 0 };
   let perLineCalc: PerLineCalc | undefined = undefined;
   if (hasPerLineTaxes) {
@@ -289,7 +306,7 @@ export const createInvoice = (
       data.items as unknown as ItemInput[],
       data.discountPercentage || 0,
       data.discountAmount || 0,
-      data.pricesIncludeTax ?? defaultPricesIncludeTax,
+      pricesIncludeTax,
       (data.roundingMode as "line" | "total") ||
         (defaultRoundingMode as "line" | "total"),
     );
@@ -304,8 +321,8 @@ export const createInvoice = (
       data.items,
       data.discountPercentage || 0,
       data.discountAmount || 0,
-      (typeof data.taxRate === "number" ? data.taxRate : defaultTaxRate) || 0,
-      data.pricesIncludeTax ?? defaultPricesIncludeTax,
+      effectiveTaxRate,
+      pricesIncludeTax,
       (data.roundingMode as "line" | "total") ||
         (defaultRoundingMode as "line" | "total"),
     );
@@ -320,7 +337,6 @@ export const createInvoice = (
   const paymentTerms =
     data.paymentTerms || settings.paymentTerms || "Due in 30 days";
 
-  const pricesIncludeTax = data.pricesIncludeTax ?? defaultPricesIncludeTax;
   const roundingMode = data.roundingMode || defaultRoundingMode;
   const templateSelection = resolveTemplateSelection(
     data.templateId,
@@ -336,6 +352,8 @@ export const createInvoice = (
     currency,
     status: data.status || "draft",
     documentType: normalizeDocumentType(data.documentType),
+    taxMode,
+    taxText,
     templateId: templateSelection.template.id,
     templateVersionId: templateSelection.version.id,
     templateHtmlSnapshot: templateSelection.html,
@@ -344,7 +362,7 @@ export const createInvoice = (
     subtotal: totals.subtotal,
     discountAmount: totals.discountAmount,
     discountPercentage: data.discountPercentage || 0,
-    taxRate: hasPerLineTaxes ? 0 : data.taxRate || 0,
+    taxRate: effectiveTaxRate,
     taxAmount: totals.taxAmount,
     total: totals.total,
 
@@ -368,8 +386,8 @@ export const createInvoice = (
       subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
       payment_terms, notes, share_token, created_at, updated_at,
       prices_include_tax, rounding_mode, template_id, template_version_id,
-      template_html_snapshot, document_type
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      template_html_snapshot, document_type, tax_mode, tax_text
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       invoice.id,
       invoice.invoiceNumber,
@@ -395,6 +413,8 @@ export const createInvoice = (
       invoice.templateVersionId,
       invoice.templateHtmlSnapshot,
       invoice.documentType,
+      invoice.taxMode,
+      invoice.taxText || "",
     ],
   );
   recordStatusChange(db, invoiceId, invoice.status || "draft");
@@ -455,7 +475,7 @@ export const createInvoice = (
               t.percent,
               calc.taxable,
               t.amount,
-              (data.pricesIncludeTax ?? defaultPricesIncludeTax) ? 1 : 0,
+              pricesIncludeTax ? 1 : 0,
               0,
               t.note || null,
               new Date(),
@@ -467,7 +487,7 @@ export const createInvoice = (
   }
 
   // Insert invoice-level tax summary if calculated
-  if (hasPerLineTaxes && perLineCalc) {
+  if (taxMode === "line" && perLineCalc) {
     for (const s of perLineCalc.summary) {
       db.query(
         `INSERT INTO invoice_taxes (id, invoice_id, tax_definition_id, percent, taxable_amount, tax_amount, created_at)
@@ -483,7 +503,7 @@ export const createInvoice = (
         ],
       );
     }
-  } else {
+  } else if (taxMode === "invoice") {
     const rawTaxDefId = (data as { taxDefinitionId?: string | null })
       .taxDefinitionId;
     const taxDefinitionId =
@@ -545,7 +565,7 @@ export const getInvoices = (): Invoice[] => {
            subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
            payment_terms, notes, share_token, created_at, updated_at,
            prices_include_tax, rounding_mode, template_id, template_version_id,
-           template_html_snapshot, document_type
+           template_html_snapshot, document_type, tax_mode, tax_text
     FROM invoices
     ORDER BY created_at DESC
   `);
@@ -561,7 +581,7 @@ export const getInvoiceById = (id: string): InvoiceWithDetails | null => {
            subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
            payment_terms, notes, share_token, created_at, updated_at,
            prices_include_tax, rounding_mode, template_id, template_version_id,
-           template_html_snapshot, document_type
+           template_html_snapshot, document_type, tax_mode, tax_text
     FROM invoices
     WHERE id = ?
   `,
@@ -667,7 +687,7 @@ export const getInvoiceByShareToken = (
            subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
            payment_terms, notes, share_token, created_at, updated_at,
            prices_include_tax, rounding_mode, template_id, template_version_id,
-           template_html_snapshot, document_type
+           template_html_snapshot, document_type, tax_mode, tax_text
     FROM invoices
     WHERE share_token = ?
   `,
@@ -806,6 +826,8 @@ export const updateInvoice = async (
       "discountAmount",
       "discountPercentage",
       "taxRate",
+      "taxMode",
+      "taxText",
       "pricesIncludeTax",
       "roundingMode",
       "currency",
@@ -843,7 +865,20 @@ export const updateInvoice = async (
     }
   }
 
-  // If items are being updated, recalculate totals
+  const nextTaxMode = data.taxMode === undefined
+    ? existing.taxMode
+    : normalizeTaxMode(data.taxMode);
+  const nextTaxText = nextTaxMode === "none"
+    ? String(data.taxText ?? existing.taxText ?? "").trim()
+    : "";
+  const nextTaxRate = nextTaxMode === "invoice"
+    ? data.taxRate ?? existing.taxRate
+    : 0;
+  const nextPricesIncludeTax = nextTaxMode === "none"
+    ? false
+    : data.pricesIncludeTax ?? existing.pricesIncludeTax ?? false;
+
+  // Recalculate whenever tax behavior or line content changes.
   let totals = {
     subtotal: existing.subtotal,
     discountAmount: existing.discountAmount,
@@ -852,16 +887,21 @@ export const updateInvoice = async (
   };
 
   let perLineCalcUpdate: PerLineCalc | undefined = undefined;
-  if (data.items) {
-    const hasPerLine = (data.items as Array<{ taxes?: LineTaxInput[] }>).some(
-      (i) => Array.isArray(i.taxes) && (i.taxes?.length || 0) > 0,
-    );
-    if (hasPerLine) {
+  const shouldRecalculate = data.items !== undefined ||
+    data.taxMode !== undefined ||
+    data.taxRate !== undefined ||
+    data.discountAmount !== undefined ||
+    data.discountPercentage !== undefined ||
+    data.pricesIncludeTax !== undefined ||
+    data.roundingMode !== undefined;
+  if (shouldRecalculate) {
+    const calculationItems = (data.items ?? existing.items) as unknown as ItemInput[];
+    if (nextTaxMode === "line") {
       perLineCalcUpdate = calculatePerLineTotals(
-        data.items as unknown as ItemInput[],
+        calculationItems,
         data.discountPercentage ?? existing.discountPercentage,
         data.discountAmount ?? existing.discountAmount,
-        data.pricesIncludeTax ?? existing.pricesIncludeTax ?? false,
+        nextPricesIncludeTax,
         (data.roundingMode as "line" | "total") ||
           (existing.roundingMode as "line" | "total") ||
           "line",
@@ -874,11 +914,11 @@ export const updateInvoice = async (
       };
     } else {
       totals = calculateInvoiceTotals(
-        data.items,
+        calculationItems,
         data.discountPercentage ?? existing.discountPercentage,
         data.discountAmount ?? existing.discountAmount,
-        data.taxRate ?? existing.taxRate,
-        data.pricesIncludeTax ?? existing.pricesIncludeTax ?? false,
+        nextTaxRate,
+        nextPricesIncludeTax,
         (data.roundingMode as "line" | "total") ||
           (existing.roundingMode as "line" | "total") ||
           "line",
@@ -921,7 +961,9 @@ export const updateInvoice = async (
       template_id = COALESCE(?, template_id),
       template_version_id = COALESCE(?, template_version_id),
       template_html_snapshot = COALESCE(?, template_html_snapshot),
-      document_type = COALESCE(?, document_type)
+      document_type = COALESCE(?, document_type),
+      tax_mode = ?,
+      tax_text = ?
     WHERE id = ?
   `,
       [
@@ -937,23 +979,21 @@ export const updateInvoice = async (
         totals.subtotal,
         totals.discountAmount,
         data.discountPercentage ?? existing.discountPercentage,
-        data.taxRate ?? existing.taxRate,
+        nextTaxRate,
         totals.taxAmount,
         totals.total,
         data.paymentTerms ?? existing.paymentTerms,
         normalizedNotes !== undefined ? normalizedNotes : existing.notes,
         updatedAt,
-        typeof data.pricesIncludeTax === "boolean"
-          ? data.pricesIncludeTax
-            ? 1
-            : 0
-          : null,
+        nextPricesIncludeTax ? 1 : 0,
         data.roundingMode ?? null,
         nextInvoiceNumber ?? null,
         templateSelection?.template.id ?? null,
         templateSelection?.version.id ?? null,
         templateSelection?.html ?? null,
         nextDocumentType,
+        nextTaxMode,
+        nextTaxText,
         id,
       ],
     );
@@ -1037,9 +1077,7 @@ export const updateInvoice = async (
                   t.percent,
                   calc.taxable,
                   t.amount,
-                  (data.pricesIncludeTax ?? existing.pricesIncludeTax ?? false)
-                    ? 1
-                    : 0,
+                  nextPricesIncludeTax ? 1 : 0,
                   0,
                   t.note || null,
                   new Date(),
@@ -1070,14 +1108,16 @@ export const updateInvoice = async (
     }
 
     // If using invoice-level tax (no per-line taxes), optionally persist a single invoice tax definition.
-    const existingHasPerLineTaxes = (existing.items || []).some(
-      (it) => Array.isArray(it.taxes) && it.taxes.length > 0,
-    );
-    const nextHasPerLineTaxes = data.items
-      ? !!perLineCalcUpdate
-      : existingHasPerLineTaxes;
+    if (nextTaxMode !== "line" && data.taxMode !== undefined) {
+      db.query(
+        "DELETE FROM invoice_item_taxes WHERE invoice_item_id IN (SELECT id FROM invoice_items WHERE invoice_id = ?)",
+        [id],
+      );
+    }
 
-    if (!nextHasPerLineTaxes) {
+    if (nextTaxMode === "none") {
+      db.query("DELETE FROM invoice_taxes WHERE invoice_id = ?", [id]);
+    } else if (nextTaxMode === "invoice") {
       const hasTaxDefinitionIdInRequest = Object.prototype.hasOwnProperty.call(
         data,
         "taxDefinitionId",
@@ -1099,10 +1139,9 @@ export const updateInvoice = async (
 
         if (effectiveTaxDefinitionId) {
           const r2 = (n: number) => Math.round(n * 100) / 100;
-          const percent = (data.taxRate ?? existing.taxRate) || 0;
+          const percent = nextTaxRate || 0;
           const rate = Math.max(0, Number(percent) || 0) / 100;
-          const includeTax =
-            data.pricesIncludeTax ?? existing.pricesIncludeTax ?? false;
+          const includeTax = nextPricesIncludeTax;
           const afterDiscount = r2(totals.subtotal - totals.discountAmount);
           const taxable = includeTax
             ? rate > 0
@@ -1183,7 +1222,9 @@ export const duplicateInvoice = async (
     items.map((i) => ({ quantity: i.quantity, unitPrice: i.unitPrice })),
     original.discountPercentage,
     original.discountAmount,
-    original.taxRate,
+    original.taxMode === "invoice" ? original.taxRate : 0,
+    original.taxMode === "none" ? false : original.pricesIncludeTax,
+    (original.roundingMode as "line" | "total") || "line",
   );
   db.execute("BEGIN");
   try {
@@ -1194,8 +1235,8 @@ export const duplicateInvoice = async (
       subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
       payment_terms, notes, share_token, created_at, updated_at,
       prices_include_tax, rounding_mode, template_id, template_version_id,
-      template_html_snapshot, document_type
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      template_html_snapshot, document_type, tax_mode, tax_text
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
       [
         newId,
@@ -1208,7 +1249,7 @@ export const duplicateInvoice = async (
         totals.subtotal,
         totals.discountAmount,
         original.discountPercentage,
-        original.taxRate,
+        original.taxMode === "invoice" ? original.taxRate : 0,
         totals.taxAmount,
         totals.total,
         original.paymentTerms || null,
@@ -1216,12 +1257,16 @@ export const duplicateInvoice = async (
         newShare,
         now,
         now,
-        (original as Invoice).pricesIncludeTax ? 1 : 0,
+        original.taxMode !== "none" && (original as Invoice).pricesIncludeTax
+          ? 1
+          : 0,
         (original as Invoice).roundingMode || "line",
         templateSelection.template.id,
         templateSelection.version.id,
         templateSelection.html,
         original.documentType,
+        original.taxMode,
+        original.taxMode === "none" ? original.taxText || "" : "",
       ],
     );
     // Copy items
@@ -1435,6 +1480,8 @@ function mapRowToInvoice(row: unknown[]): Invoice {
     templateVersionId: row[21] ? String(row[21]) : undefined,
     templateHtmlSnapshot: row[22] ? String(row[22]) : undefined,
     documentType: normalizeDocumentType(row[23]),
+    taxMode: normalizeTaxMode(row[24]),
+    taxText: row[25] ? String(row[25]) : undefined,
   };
 }
 

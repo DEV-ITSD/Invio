@@ -31,6 +31,7 @@ export interface Product {
 }
 
 export type InvoiceDocumentType = "invoice" | "receipt";
+export type InvoiceTaxMode = "invoice" | "line" | "none";
 
 export interface Invoice {
   id: string;
@@ -41,6 +42,8 @@ export interface Invoice {
   currency: string;
   status: "draft" | "sent" | "complete" | "paid" | "overdue" | "voided";
   documentType: InvoiceDocumentType;
+  taxMode: InvoiceTaxMode;
+  taxText?: string;
 
   // Totals
   subtotal: number;
@@ -279,6 +282,8 @@ export interface CreateInvoiceRequest {
   discountPercentage?: number;
   taxRate?: number;
   taxDefinitionId?: string | null;
+  taxMode?: InvoiceTaxMode;
+  taxText?: string;
 
   // Tax behavior flags
   pricesIncludeTax?: boolean;
@@ -417,6 +422,10 @@ export interface TemplateContext {
     amount: string; // formatted amount
   }>;
   hasTaxSummary?: boolean;
+  taxMode: InvoiceTaxMode;
+  taxText?: string;
+  zeroTaxAmount?: string;
+  hasTaxText: boolean;
 
   // Flags
   hasDiscount: boolean;

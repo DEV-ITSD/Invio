@@ -10,7 +10,7 @@ INSERT OR IGNORE INTO settings (key, value) VALUES
   ('companyAddress', '123 Business St, City, State 12345'),
   ('companyEmail', 'contact@yourcompany.com'),
   ('companyPhone', '+1 (555) 123-4567'),
-  ('companyTaxId', 'TAX123456789'),
+  ('companyTaxId', ''),
   ('companyCountryCode', 'US'),
   ('currency', 'USD'),
   ('logo', ''),
@@ -29,6 +29,11 @@ INSERT OR IGNORE INTO settings (key, value) VALUES
   ('peppolSellerEndpointSchemeId', ''),
   ('peppolBuyerEndpointId', ''),
   ('peppolBuyerEndpointSchemeId', '');
+
+-- Remove the old demo tax number when upgrading an existing installation.
+UPDATE settings
+SET value = ''
+WHERE key = 'companyTaxId' AND value = 'TAX123456789';
 
 -- Enhanced customers table
 CREATE TABLE customers (
@@ -74,6 +79,8 @@ CREATE TABLE invoices (
   template_version_id TEXT,
   template_html_snapshot TEXT,
   document_type TEXT NOT NULL DEFAULT 'invoice',
+  tax_mode TEXT NOT NULL DEFAULT 'invoice',
+  tax_text TEXT NOT NULL DEFAULT '',
   
   -- System fields
   share_token TEXT UNIQUE NOT NULL,

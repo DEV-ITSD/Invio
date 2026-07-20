@@ -216,6 +216,31 @@ function ensureInvoiceColumns(database: DB): void {
     "document_type",
     "TEXT NOT NULL DEFAULT 'invoice'",
   );
+  addColumnIfMissing(
+    database,
+    "invoices",
+    "tax_mode",
+    "TEXT NOT NULL DEFAULT 'invoice'",
+  );
+  addColumnIfMissing(
+    database,
+    "invoices",
+    "tax_text",
+    "TEXT NOT NULL DEFAULT ''",
+  );
+
+  // Older versions inferred per-line mode from stored line tax rows.
+  database.execute(`
+    UPDATE invoices
+       SET tax_mode = 'line'
+     WHERE tax_mode = 'invoice'
+       AND EXISTS (
+         SELECT 1
+           FROM invoice_items ii
+           JOIN invoice_item_taxes iit ON iit.invoice_item_id = ii.id
+          WHERE ii.invoice_id = invoices.id
+       )
+  `);
 }
 
 function ensureTemplateVersioning(database: DB): void {
@@ -506,7 +531,9 @@ function migrateInvoicesForVoided(database: DB): void {
         template_id TEXT,
         template_version_id TEXT,
         template_html_snapshot TEXT,
-        document_type TEXT NOT NULL DEFAULT 'invoice'
+        document_type TEXT NOT NULL DEFAULT 'invoice',
+        tax_mode TEXT NOT NULL DEFAULT 'invoice',
+        tax_text TEXT NOT NULL DEFAULT ''
       )
     `);
 

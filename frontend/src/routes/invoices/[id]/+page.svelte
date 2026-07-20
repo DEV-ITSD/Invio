@@ -478,12 +478,19 @@
         <span class="mr-1 opacity-70">{t("Subtotal")}:</span>
         {fmtMoney(invoice.subtotal)}
       </div>
+      {#if invoice.taxMode === "none" && String(invoice.taxText || "").trim()}
+        <div>
+          <span class="mr-1 opacity-70">{invoice.taxText}:</span>
+          {fmtMoney(0)}
+        </div>
+      {/if}
 
       <div class="flex flex-wrap gap-1 text-xs opacity-60">
         {t("Tax rate")}: {invoice.taxRate}% -
         {t("Prices include tax")}: {invoice.pricesIncludeTax ? t("Yes") : t("No")} -
         {t("Rounding")}: {t("Round per line")} -
-        {t("Tax mode")}: {invoice.taxes?.length ? t("Per line") : t("Invoice total")}
+        {t("Tax mode")}:
+        {invoice.taxMode === "none" ? t("No tax") : invoice.taxMode === "line" ? t("Per line") : t("Invoice total")}
       </div>
 
       <div class="mt-4">

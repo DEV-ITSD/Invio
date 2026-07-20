@@ -88,7 +88,7 @@ INSERT OR IGNORE INTO settings (key, value) VALUES
   ('companyAddress', '123 Business St, City, State 12345'),
   ('companyEmail', 'contact@yourcompany.com'),
   ('companyPhone', '+1 (555) 123-4567'),
-  ('companyTaxId', 'TAX123456789'),
+  ('companyTaxId', ''),
   ('currency', 'USD'),
   ('logo', ''),
   ('paymentMethods', 'Bank Transfer, PayPal, Credit Card'),
