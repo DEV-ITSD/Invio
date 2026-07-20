@@ -8,6 +8,7 @@
   let initInvoice = untrack(() => invoice);
   let initSettings = untrack(() => data?.settings || {});
   let initNextInvoiceNumber = untrack(() => data?.nextInvoiceNumber || "");
+  let defaultTaxText = String(initSettings.defaultTaxText ?? "").trim();
   let t = getContext("i18n") as (key: string) => string;
   let loc = getContext("localization") as any;
 
@@ -29,7 +30,7 @@
     issueDate: initInvoice?.issueDate ? new Date(initInvoice.issueDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
     dueDate: initInvoice?.dueDate ? new Date(initInvoice.dueDate).toISOString().slice(0, 10) : "",
     taxMode: initInvoice?.taxMode || "invoice",
-    taxText: initInvoice ? (initInvoice.taxMode === "none" ? (initInvoice.taxText ?? "") : (initSettings.defaultTaxText ?? "")) : (initSettings.defaultTaxText ?? ""),
+    taxText: String(initInvoice?.taxText ?? "").trim() || defaultTaxText,
     taxRate: initInvoice?.taxRate || 0,
     pricesIncludeTax: initInvoice?.pricesIncludeTax ? "true" : "false",
     roundingMode: initInvoice?.roundingMode || "line",
@@ -84,6 +85,13 @@
     form.templateId = (event.currentTarget as HTMLSelectElement).value;
     const template = templates.find((item: any) => item.id === form.templateId);
     form.templateVersionId = template?.activeVersionId || template?.versions?.[0]?.id || "";
+  }
+
+  function changeTaxMode(event: Event) {
+    form.taxMode = (event.currentTarget as HTMLSelectElement).value;
+    if (form.taxMode === "none" && !String(form.taxText ?? "").trim()) {
+      form.taxText = defaultTaxText;
+    }
   }
 
   // Re-preview the next invoice number whenever the customer changes, so
@@ -478,10 +486,10 @@
     >
   </div>
 
-  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+  <div class={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${form.taxMode === "none" ? "lg:grid-cols-2" : form.taxMode === "line" ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}>
     <label class="form-control">
       <div class="label"><span class="label-text">{t("Tax Mode")}</span></div>
-      <select class="select select-bordered w-full" bind:value={form.taxMode}>
+      <select class="select select-bordered w-full" value={form.taxMode} onchange={changeTaxMode}>
         <option value="invoice">{t("Invoice total")}</option>
         <option value="line">{t("Per line")}</option>
         <option value="none">{t("No tax")}</option>
@@ -504,25 +512,27 @@
       <input type="number" class="input input-bordered w-full" bind:value={form.taxRate} step="any" min="0" />
     </label>
 
-    <label class="form-control">
-      <div class="label">
-        <span class="label-text">{t("Prices include tax?")}</span>
-      </div>
-      <select class="select select-bordered w-full" bind:value={form.pricesIncludeTax}>
-        <option value="false">{t("No")}</option>
-        <option value="true">{t("Yes")}</option>
-      </select>
-    </label>
+    {#if form.taxMode !== "none"}
+      <label class="form-control">
+        <div class="label">
+          <span class="label-text">{t("Prices include tax?")}</span>
+        </div>
+        <select class="select select-bordered w-full" bind:value={form.pricesIncludeTax}>
+          <option value="false">{t("No")}</option>
+          <option value="true">{t("Yes")}</option>
+        </select>
+      </label>
 
-    <label class="form-control">
-      <div class="label">
-        <span class="label-text">{t("Rounding mode")}</span>
-      </div>
-      <select class="select select-bordered w-full" bind:value={form.roundingMode}>
-        <option value="line">{t("Round per line")}</option>
-        <option value="total">{t("Round on total")}</option>
-      </select>
-    </label>
+      <label class="form-control">
+        <div class="label">
+          <span class="label-text">{t("Rounding mode")}</span>
+        </div>
+        <select class="select select-bordered w-full" bind:value={form.roundingMode}>
+          <option value="line">{t("Round per line")}</option>
+          <option value="total">{t("Round on total")}</option>
+        </select>
+      </label>
+    {/if}
   </div>
 
   <div class="grid grid-cols-1 gap-4 md:grid-cols-2">

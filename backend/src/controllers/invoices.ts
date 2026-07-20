@@ -866,9 +866,11 @@ export const updateInvoice = async (
   const nextTaxMode = data.taxMode === undefined
     ? existing.taxMode
     : normalizeTaxMode(data.taxMode);
-  const nextTaxText = nextTaxMode === "none"
-    ? String(data.taxText ?? existing.taxText ?? "").trim()
-    : "";
+  const nextTaxText = resolveNoTaxText(
+    nextTaxMode,
+    data.taxText ?? existing.taxText,
+    getSetting("defaultTaxText"),
+  );
   const nextTaxRate = nextTaxMode === "invoice"
     ? data.taxRate ?? existing.taxRate
     : 0;

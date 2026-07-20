@@ -26,15 +26,20 @@ Deno.test("normalizeTaxMode rejects unsupported values", () => {
   if (!threw) throw new Error("Expected unsupported tax mode to be rejected");
 });
 
-Deno.test("resolveNoTaxText uses the configured default only when omitted", () => {
+Deno.test("resolveNoTaxText uses the configured default when text is empty", () => {
   if (
     resolveNoTaxText("none", undefined, "  Exempt from VAT  ") !==
       "Exempt from VAT"
   ) {
     throw new Error("Expected the configured default tax text");
   }
-  if (resolveNoTaxText("none", "", "Exempt from VAT") !== "") {
-    throw new Error("Expected an explicitly cleared tax text to remain empty");
+  for (const emptyValue of ["", "   "]) {
+    if (
+      resolveNoTaxText("none", emptyValue, "Exempt from VAT") !==
+        "Exempt from VAT"
+    ) {
+      throw new Error("Expected empty tax text to use the configured default");
+    }
   }
 });
 

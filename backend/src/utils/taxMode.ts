@@ -14,5 +14,7 @@ export function resolveNoTaxText(
   defaultValue: unknown = "",
 ): string {
   if (taxMode !== "none") return "";
-  return String(value ?? defaultValue ?? "").trim();
+  const normalizedValue = String(value ?? "").trim();
+  if (normalizedValue) return normalizedValue;
+  return String(defaultValue ?? "").trim();
 }
