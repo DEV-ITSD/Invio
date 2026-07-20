@@ -17,15 +17,11 @@
   function fmtMoney(cur: string | undefined, n: number) {
     if (!cur) cur = "USD";
     try {
-     const locale = data.localization?.numberFormat === "period"
-      ? "de-DE"
-      : data.localization?.numberFormat === "swiss"
-        ? "de-CH"
-        : "en-US";
-     return new Intl.NumberFormat(locale, {
-      style: "currency",
-      currency: cur,
-    }).format(n || 0);
+      const locale = data.localization?.numberFormat === "period" ? "de-DE" : data.localization?.numberFormat === "swiss" ? "de-CH" : "en-US";
+      return new Intl.NumberFormat(locale, {
+        style: "currency",
+        currency: cur,
+      }).format(n || 0);
     } catch {
       return `${cur} ${Number(n || 0).toFixed(2)}`;
     }
@@ -95,6 +91,10 @@
       <div>
         <div class="mb-1 text-sm opacity-70">{t("Description")}</div>
         <div class="font-medium">{p.description || "-"}</div>
+      </div>
+      <div>
+        <div class="mb-1 text-sm opacity-70">{t("Notes")}</div>
+        <div class="font-medium whitespace-pre-wrap">{p.notes || "-"}</div>
       </div>
       <div>
         <div class="mb-1 text-sm opacity-70">{t("SKU")}</div>

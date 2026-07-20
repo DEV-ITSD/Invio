@@ -200,6 +200,7 @@ CREATE TABLE IF NOT EXISTS products (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   description TEXT,
+  notes TEXT,
   unit_price NUMERIC NOT NULL DEFAULT 0,
   sku TEXT,
   unit TEXT DEFAULT 'piece',

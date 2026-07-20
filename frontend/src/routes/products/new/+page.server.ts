@@ -47,6 +47,7 @@ export const actions: Actions = {
     const form = await request.formData();
     const name = String(form.get("name") || "");
     const description = String(form.get("description") || "");
+    const notes = String(form.get("notes") || "");
     const unitPrice = parseFloat(String(form.get("unitPrice") || "0"));
     const sku = String(form.get("sku") || "");
     const unit = String(form.get("unit") || "");
@@ -62,6 +63,7 @@ export const actions: Actions = {
       created = await backendPost("/api/v1/products", locals.authHeader, {
         name,
         description: description || undefined,
+        notes: notes || undefined,
         unitPrice,
         sku: sku || undefined,
         unit: unit || undefined,

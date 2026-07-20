@@ -19,6 +19,7 @@ const mapRowToProduct = (row: unknown[]): Product => ({
   isActive: Boolean(row[8]),
   createdAt: new Date(row[9] as string),
   updatedAt: new Date(row[10] as string),
+  notes: (row[11] ?? undefined) as string | undefined,
 });
 
 const toNullable = (v?: string): string | null => {
@@ -30,8 +31,8 @@ const toNullable = (v?: string): string | null => {
 export const getProducts = (includeInactive = false): Product[] => {
   const db = getDatabase();
   const query = includeInactive
-    ? "SELECT id, name, description, unit_price, sku, unit, category, tax_definition_id, is_active, created_at, updated_at FROM products ORDER BY name ASC"
-    : "SELECT id, name, description, unit_price, sku, unit, category, tax_definition_id, is_active, created_at, updated_at FROM products WHERE is_active = 1 ORDER BY name ASC";
+    ? "SELECT id, name, description, unit_price, sku, unit, category, tax_definition_id, is_active, created_at, updated_at, notes FROM products ORDER BY name ASC"
+    : "SELECT id, name, description, unit_price, sku, unit, category, tax_definition_id, is_active, created_at, updated_at, notes FROM products WHERE is_active = 1 ORDER BY name ASC";
   const results = db.query(query) as unknown[][];
   return results.map((row: unknown[]) => mapRowToProduct(row));
 };
@@ -39,7 +40,7 @@ export const getProducts = (includeInactive = false): Product[] => {
 export const getProductById = (id: string): Product | null => {
   const db = getDatabase();
   const results = db.query(
-    "SELECT id, name, description, unit_price, sku, unit, category, tax_definition_id, is_active, created_at, updated_at FROM products WHERE id = ?",
+    "SELECT id, name, description, unit_price, sku, unit, category, tax_definition_id, is_active, created_at, updated_at, notes FROM products WHERE id = ?",
     [id],
   ) as unknown[][];
   if (results.length === 0) return null;
@@ -52,14 +53,15 @@ export const createProduct = (data: CreateProductRequest): Product => {
   const now = new Date();
 
   const description = toNullable(data.description);
+  const notes = toNullable(data.notes);
   const sku = toNullable(data.sku);
   const unit = toNullable(data.unit) || "piece";
   const category = toNullable(data.category);
   const taxDefinitionId = toNullable(data.taxDefinitionId);
 
   db.query(
-    `INSERT INTO products (id, name, description, unit_price, sku, unit, category, tax_definition_id, is_active, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+    `INSERT INTO products (id, name, description, unit_price, sku, unit, category, tax_definition_id, is_active, created_at, updated_at, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)`,
     [
       productId,
       data.name,
@@ -71,6 +73,7 @@ export const createProduct = (data: CreateProductRequest): Product => {
       taxDefinitionId,
       now.toISOString(),
       now.toISOString(),
+      notes,
     ],
   );
 
@@ -78,6 +81,7 @@ export const createProduct = (data: CreateProductRequest): Product => {
     id: productId,
     name: data.name,
     description: description ?? undefined,
+    notes: notes ?? undefined,
     unitPrice: data.unitPrice || 0,
     sku: sku ?? undefined,
     unit: unit,
@@ -100,36 +104,39 @@ export const updateProduct = (
   const now = new Date();
 
   const name = data.name ?? existing.name;
-  const description =
-    data.description !== undefined
-      ? toNullable(data.description)
-      : existing.description ?? null;
-  const unitPrice =
-    data.unitPrice !== undefined ? data.unitPrice : existing.unitPrice;
-  const sku =
-    data.sku !== undefined ? toNullable(data.sku) : existing.sku ?? null;
-  const unit =
-    data.unit !== undefined
-      ? toNullable(data.unit) || "piece"
-      : existing.unit ?? "piece";
-  const category =
-    data.category !== undefined
-      ? toNullable(data.category)
-      : existing.category ?? null;
-  const taxDefinitionId =
-    data.taxDefinitionId !== undefined
-      ? toNullable(data.taxDefinitionId)
-      : existing.taxDefinitionId ?? null;
-  const isActive =
-    data.isActive !== undefined ? data.isActive : existing.isActive;
+  const description = data.description !== undefined
+    ? toNullable(data.description)
+    : existing.description ?? null;
+  const notes = data.notes !== undefined
+    ? toNullable(data.notes)
+    : existing.notes ?? null;
+  const unitPrice = data.unitPrice !== undefined
+    ? data.unitPrice
+    : existing.unitPrice;
+  const sku = data.sku !== undefined
+    ? toNullable(data.sku)
+    : existing.sku ?? null;
+  const unit = data.unit !== undefined
+    ? toNullable(data.unit) || "piece"
+    : existing.unit ?? "piece";
+  const category = data.category !== undefined
+    ? toNullable(data.category)
+    : existing.category ?? null;
+  const taxDefinitionId = data.taxDefinitionId !== undefined
+    ? toNullable(data.taxDefinitionId)
+    : existing.taxDefinitionId ?? null;
+  const isActive = data.isActive !== undefined
+    ? data.isActive
+    : existing.isActive;
 
   db.query(
     `UPDATE products SET
-      name = ?, description = ?, unit_price = ?, sku = ?, unit = ?, category = ?, tax_definition_id = ?, is_active = ?, updated_at = ?
+      name = ?, description = ?, notes = ?, unit_price = ?, sku = ?, unit = ?, category = ?, tax_definition_id = ?, is_active = ?, updated_at = ?
      WHERE id = ?`,
     [
       name,
       description,
+      notes,
       unitPrice,
       sku,
       unit,

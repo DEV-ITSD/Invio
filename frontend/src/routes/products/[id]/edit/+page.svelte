@@ -53,6 +53,13 @@
         <textarea id="description" name="description" class="textarea textarea-bordered w-full" rows="3" value={p.description}></textarea>
       </div>
 
+      <div class="form-control w-full">
+        <label class="label pb-1" for="notes">
+          <span class="label-text">{t("Notes")}</span>
+        </label>
+        <textarea id="notes" name="notes" class="textarea textarea-bordered w-full" rows="3" value={p.notes}></textarea>
+      </div>
+
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div class="form-control w-full">
           <label class="label pb-1" for="unitPrice">
