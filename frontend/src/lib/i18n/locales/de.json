@@ -98,6 +98,7 @@
   "Default Template": "Standardvorlage",
   "Default XML Profile": "Standard-XML-Profil",
   "Default tax rate (%)": "Standardsteuersatz (%)",
+  "Default tax text": "Standard-Steuertext",
   "Delete": "Löschen",
   "Delete category confirm": "Kategorie \"{{name}}\" löschen? Dies kann nicht rückgängig gemacht werden.",
   "Delete or reassign all invoices for this customer": "Löschen oder übertragen Sie alle Rechnungen dieses Kunden",

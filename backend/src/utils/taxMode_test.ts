@@ -1,4 +1,4 @@
-import { normalizeTaxMode } from "./taxMode.ts";
+import { normalizeTaxMode, resolveNoTaxText } from "./taxMode.ts";
 
 Deno.test("normalizeTaxMode accepts every supported mode", () => {
   for (const mode of ["invoice", "line", "none"] as const) {
@@ -24,4 +24,24 @@ Deno.test("normalizeTaxMode rejects unsupported values", () => {
     threw = true;
   }
   if (!threw) throw new Error("Expected unsupported tax mode to be rejected");
+});
+
+Deno.test("resolveNoTaxText uses the configured default only when omitted", () => {
+  if (
+    resolveNoTaxText("none", undefined, "  Exempt from VAT  ") !==
+      "Exempt from VAT"
+  ) {
+    throw new Error("Expected the configured default tax text");
+  }
+  if (resolveNoTaxText("none", "", "Exempt from VAT") !== "") {
+    throw new Error("Expected an explicitly cleared tax text to remain empty");
+  }
+});
+
+Deno.test("resolveNoTaxText clears text for taxable modes", () => {
+  for (const mode of ["invoice", "line"] as const) {
+    if (resolveNoTaxText(mode, "Exempt from VAT", "Default") !== "") {
+      throw new Error(`Expected ${mode} mode to clear the tax text`);
+    }
+  }
 });

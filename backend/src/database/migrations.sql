@@ -18,6 +18,7 @@ INSERT OR IGNORE INTO settings (key, value) VALUES
   ('bankAccount', 'Account: 1234567890, Routing: 987654321'),
   ('paymentTerms', 'Due in 30 days'),
   ('defaultNotes', 'Thank you for your business!'),
+  ('defaultTaxText', ''),
   ('postalCityFormat', 'auto'),
   -- Optional default invoice number pattern (tokens: {SEQ} {CSEQ} {CNUM} {CUST} {YYYY} {YY} {MM} {DD} {DATE} {RAND4})
   ('invoiceNumberPattern', ''),
