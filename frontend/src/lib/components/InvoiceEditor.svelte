@@ -29,7 +29,7 @@
     issueDate: initInvoice?.issueDate ? new Date(initInvoice.issueDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
     dueDate: initInvoice?.dueDate ? new Date(initInvoice.dueDate).toISOString().slice(0, 10) : "",
     taxMode: initInvoice?.taxMode || "invoice",
-    taxText: initInvoice?.taxText || "",
+    taxText: initInvoice ? (initInvoice.taxMode === "none" ? (initInvoice.taxText ?? "") : (initSettings.defaultTaxText ?? "")) : (initSettings.defaultTaxText ?? ""),
     taxRate: initInvoice?.taxRate || 0,
     pricesIncludeTax: initInvoice?.pricesIncludeTax ? "true" : "false",
     roundingMode: initInvoice?.roundingMode || "line",
@@ -290,7 +290,7 @@
     <div class="alert alert-error">{error}</div>
   {/if}
 
-  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
     <label class="form-control">
       <div class="label">
         <span class="label-text">{t("Customer")} <span class="text-error">*</span></span>
@@ -488,12 +488,14 @@
       </select>
     </label>
 
-    <label class="form-control">
-      <div class="label">
-        <span class="label-text">{t("Tax text")}</span>
-      </div>
-      <input type="text" class="input input-bordered w-full" bind:value={form.taxText} disabled={form.taxMode !== "none"} />
-    </label>
+    {#if form.taxMode === "none"}
+      <label class="form-control">
+        <div class="label">
+          <span class="label-text">{t("Tax text")}</span>
+        </div>
+        <input type="text" class="input input-bordered w-full" bind:value={form.taxText} />
+      </label>
+    {/if}
 
     <label class="form-control" class:hidden={form.taxMode !== "invoice"}>
       <div class="label">

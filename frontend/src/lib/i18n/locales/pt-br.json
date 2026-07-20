@@ -98,6 +98,7 @@
   "Default Template": "Modelo Padrão",
   "Default XML Profile": "Perfil XML Padrão",
   "Default tax rate (%)": "Taxa de imposto padrão (%)",
+  "Default tax text": "Texto de imposto padrão",
   "Delete": "Excluir",
   "Delete category confirm": "Excluir categoria \"{{name}}\"? Esta ação não pode ser desfeita.",
   "Delete or reassign all invoices for this customer": "Exclua ou reatribua todas as faturas deste cliente",

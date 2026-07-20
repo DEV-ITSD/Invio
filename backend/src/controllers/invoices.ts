@@ -16,7 +16,7 @@ import {
 } from "../types/index.ts";
 import { generateShareToken, generateUUID } from "../utils/uuid.ts";
 import { normalizeDocumentType } from "../utils/documentType.ts";
-import { normalizeTaxMode } from "../utils/taxMode.ts";
+import { normalizeTaxMode, resolveNoTaxText } from "../utils/taxMode.ts";
 
 type LineTaxInput = {
   percent: number;
@@ -108,8 +108,8 @@ function calculatePerLineTotals(
     const gross = lineGrosses[i] || 0;
     const afterDiscount = Math.max(0, gross - (lineDiscounts[i] || 0));
     const taxes = items[i].taxes || [];
-    const rateSum =
-      taxes.reduce((s, t) => s + (Number(t.percent) || 0), 0) / 100;
+    const rateSum = taxes.reduce((s, t) => s + (Number(t.percent) || 0), 0) /
+      100;
 
     let net = afterDiscount;
     if (pricesIncludeTax && rateSum > 0) {
@@ -271,23 +271,21 @@ export const createInvoice = (
   // Determine tax behavior defaults
   const defaultPricesIncludeTax =
     String(settings.defaultPricesIncludeTax || "false").toLowerCase() ===
-    "true";
+      "true";
   const defaultRoundingMode = String(settings.defaultRoundingMode || "line");
   const defaultTaxRate = Number(settings.defaultTaxRate || 0) || 0;
+  const defaultTaxText = String(settings.defaultTaxText || "");
 
   // Determine the persisted tax mode. Older API clients that send line taxes
   // without taxMode continue to be detected as per-line mode.
-  const itemsHavePerLineTaxes =
-    Array.isArray(data.items) &&
+  const itemsHavePerLineTaxes = Array.isArray(data.items) &&
     data.items.some(
       (i) =>
         Array.isArray((i as { taxes?: LineTaxInput[] }).taxes) &&
         ((i as { taxes?: LineTaxInput[] }).taxes?.length || 0) > 0,
     );
   const taxMode = data.taxMode === undefined
-    ? itemsHavePerLineTaxes
-      ? "line"
-      : "invoice"
+    ? itemsHavePerLineTaxes ? "line" : "invoice"
     : normalizeTaxMode(data.taxMode);
   const hasPerLineTaxes = taxMode === "line";
   const effectiveTaxRate = taxMode === "invoice"
@@ -296,9 +294,11 @@ export const createInvoice = (
   const pricesIncludeTax = taxMode === "none"
     ? false
     : data.pricesIncludeTax ?? defaultPricesIncludeTax;
-  const taxText = taxMode === "none"
-    ? String(data.taxText ?? "").trim()
-    : "";
+  const taxText = resolveNoTaxText(
+    taxMode,
+    data.taxText,
+    defaultTaxText,
+  );
   let totals = { subtotal: 0, discountAmount: 0, taxAmount: 0, total: 0 };
   let perLineCalc: PerLineCalc | undefined = undefined;
   if (hasPerLineTaxes) {
@@ -334,8 +334,8 @@ export const createInvoice = (
 
   // Get default settings for currency and payment terms
   const currency = data.currency || settings.currency || "USD";
-  const paymentTerms =
-    data.paymentTerms || settings.paymentTerms || "Due in 30 days";
+  const paymentTerms = data.paymentTerms || settings.paymentTerms ||
+    "Due in 30 days";
 
   const roundingMode = data.roundingMode || defaultRoundingMode;
   const templateSelection = resolveTemplateSelection(
@@ -506,17 +506,16 @@ export const createInvoice = (
   } else if (taxMode === "invoice") {
     const rawTaxDefId = (data as { taxDefinitionId?: string | null })
       .taxDefinitionId;
-    const taxDefinitionId =
-      typeof rawTaxDefId === "string" ? rawTaxDefId.trim() : "";
+    const taxDefinitionId = typeof rawTaxDefId === "string"
+      ? rawTaxDefId.trim()
+      : "";
     if (taxDefinitionId) {
       const r2 = (n: number) => Math.round(n * 100) / 100;
       const percent = invoice.taxRate || 0;
       const rate = Math.max(0, Number(percent) || 0) / 100;
       const afterDiscount = r2(invoice.subtotal - invoice.discountAmount);
       const taxable = pricesIncludeTax
-        ? rate > 0
-          ? r2(afterDiscount / (1 + rate))
-          : afterDiscount
+        ? rate > 0 ? r2(afterDiscount / (1 + rate)) : afterDiscount
         : afterDiscount;
       db.query(
         `INSERT INTO invoice_taxes (id, invoice_id, tax_definition_id, percent, taxable_amount, tax_amount, created_at)
@@ -544,17 +543,16 @@ export const createInvoice = (
     ...invoice,
     customer,
     items,
-    taxes:
-      hasPerLineTaxes && perLineCalc
-        ? perLineCalc.summary.map((s) => ({
-            id: "",
-            invoiceId: invoiceId,
-            taxDefinitionId: undefined,
-            percent: s.percent,
-            taxableAmount: s.taxable,
-            taxAmount: s.amount,
-          }))
-        : undefined,
+    taxes: hasPerLineTaxes && perLineCalc
+      ? perLineCalc.summary.map((s) => ({
+        id: "",
+        invoiceId: invoiceId,
+        taxDefinitionId: undefined,
+        percent: s.percent,
+        taxableAmount: s.taxable,
+        taxAmount: s.amount,
+      }))
+      : undefined,
   };
 };
 
@@ -895,7 +893,8 @@ export const updateInvoice = async (
     data.pricesIncludeTax !== undefined ||
     data.roundingMode !== undefined;
   if (shouldRecalculate) {
-    const calculationItems = (data.items ?? existing.items) as unknown as ItemInput[];
+    const calculationItems =
+      (data.items ?? existing.items) as unknown as ItemInput[];
     if (nextTaxMode === "line") {
       perLineCalcUpdate = calculatePerLineTotals(
         calculationItems,
@@ -927,16 +926,15 @@ export const updateInvoice = async (
   }
 
   const updatedAt = new Date();
-  const nextDocumentType =
-    data.documentType === undefined
-      ? null
-      : normalizeDocumentType(data.documentType);
+  const nextDocumentType = data.documentType === undefined
+    ? null
+    : normalizeDocumentType(data.documentType);
   const templateSelection =
     data.templateId !== undefined || data.templateVersionId !== undefined
       ? resolveTemplateSelection(
-          data.templateId ?? existing.templateId,
-          data.templateVersionId,
-        )
+        data.templateId ?? existing.templateId,
+        data.templateVersionId,
+      )
       : undefined;
 
   // Normalize notes: treat whitespace-only as empty string so it clears stored notes
@@ -972,8 +970,8 @@ export const updateInvoice = async (
         data.dueDate === null || data.dueDate === ""
           ? null
           : data.dueDate
-            ? new Date(data.dueDate)
-            : existing.dueDate,
+          ? new Date(data.dueDate)
+          : existing.dueDate,
         data.currency ?? existing.currency,
         data.status ?? existing.status,
         totals.subtotal,
@@ -1126,13 +1124,14 @@ export const updateInvoice = async (
       if (data.items || hasTaxDefinitionIdInRequest) {
         const rawTaxDefId = (data as { taxDefinitionId?: string | null })
           .taxDefinitionId;
-        const requested =
-          typeof rawTaxDefId === "string" ? rawTaxDefId.trim() : "";
+        const requested = typeof rawTaxDefId === "string"
+          ? rawTaxDefId.trim()
+          : "";
         const effectiveTaxDefinitionId = hasTaxDefinitionIdInRequest
           ? requested || undefined
           : existing.taxes && existing.taxes.length > 0
-            ? existing.taxes[0].taxDefinitionId
-            : undefined;
+          ? existing.taxes[0].taxDefinitionId
+          : undefined;
 
         // Replace existing invoice_taxes rows (invoice-level mode only)
         db.query("DELETE FROM invoice_taxes WHERE invoice_id = ?", [id]);
@@ -1144,9 +1143,7 @@ export const updateInvoice = async (
           const includeTax = nextPricesIncludeTax;
           const afterDiscount = r2(totals.subtotal - totals.discountAmount);
           const taxable = includeTax
-            ? rate > 0
-              ? r2(afterDiscount / (1 + rate))
-              : afterDiscount
+            ? rate > 0 ? r2(afterDiscount / (1 + rate)) : afterDiscount
             : afterDiscount;
           db.query(
             `INSERT INTO invoice_taxes (id, invoice_id, tax_definition_id, percent, taxable_amount, tax_amount, created_at)
@@ -1462,7 +1459,12 @@ function mapRowToInvoice(row: unknown[]): Invoice {
     dueDate: row[4] ? new Date(row[4] as string) : undefined,
     currency: row[5] as string,
     status: row[6] as
-      "draft" | "sent" | "complete" | "paid" | "overdue" | "voided",
+      | "draft"
+      | "sent"
+      | "complete"
+      | "paid"
+      | "overdue"
+      | "voided",
     subtotal: row[7] as number,
     discountAmount: row[8] as number,
     discountPercentage: row[9] as number,

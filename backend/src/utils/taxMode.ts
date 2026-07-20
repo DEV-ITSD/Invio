@@ -7,3 +7,12 @@ export function normalizeTaxMode(value: unknown): InvoiceTaxMode {
   }
   throw new Error("Tax mode must be 'invoice', 'line', or 'none'.");
 }
+
+export function resolveNoTaxText(
+  taxMode: InvoiceTaxMode,
+  value: unknown,
+  defaultValue: unknown = "",
+): string {
+  if (taxMode !== "none") return "";
+  return String(value ?? defaultValue ?? "").trim();
+}

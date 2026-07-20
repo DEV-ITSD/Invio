@@ -98,6 +98,7 @@
   "Default Template": "Standaardtemplate",
   "Default XML Profile": "Standaard XML-profiel",
   "Default tax rate (%)": "Standaard btw-tarief (%)",
+  "Default tax text": "Standaard belastingtekst",
   "Delete": "Verwijderen",
   "Delete category confirm": "Categorie \"{{name}}\" verwijderen? Dit kan niet ongedaan worden gemaakt.",
   "Delete or reassign all invoices for this customer": "Verwijder of wijs alle facturen van deze klant opnieuw toe",

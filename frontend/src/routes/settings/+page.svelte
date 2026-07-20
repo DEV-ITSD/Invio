@@ -20,6 +20,7 @@
     dateFormat: "YYYY-MM-DD",
     numberFormat: "comma",
     postalCityFormat: "auto",
+    defaultTaxText: "",
     ...initialSettings,
     allowProtectedInvoiceChanges: asBool((initialSettings as Record<string, unknown>).allowProtectedInvoiceChanges),
   } as Record<string, any>);
@@ -288,6 +289,12 @@
             <span class="label-text">{t("Tax Label")}</span>
           </div>
           <input type="text" class="input input-bordered w-full" bind:value={settings.taxLabel} disabled={!canUpdateSettings} />
+        </label>
+        <label class="form-control"
+          ><div class="label">
+            <span class="label-text">{t("Default tax text")}</span>
+          </div>
+          <input type="text" class="input input-bordered w-full" bind:value={settings.defaultTaxText} disabled={!canUpdateSettings} />
         </label>
         <label class="form-control"
           ><div class="label">
