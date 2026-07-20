@@ -131,7 +131,8 @@
     const product = products.find((p: any) => p.id === productId);
     if (!product) return;
 
-    item.description = product.name || item.description;
+    item.description = String(product.description ?? "");
+    item.notes = String(product.notes ?? "");
     item.unitPrice = Number(product.unitPrice ?? product.unit_price ?? item.unitPrice ?? 0);
     item.unit = String(product.unit ?? item.unit ?? "");
 

@@ -17,11 +17,7 @@
   function fmtMoney(cur: string | undefined, n: number) {
     if (!cur) cur = "USD";
     try {
-      const locale = numberFormat === "period"
-        ? "de-DE"
-        : numberFormat === "swiss"
-          ? "de-CH"
-          : "en-US";
+      const locale = numberFormat === "period" ? "de-DE" : numberFormat === "swiss" ? "de-CH" : "en-US";
       return new Intl.NumberFormat(locale, {
         style: "currency",
         currency: cur,
@@ -62,6 +58,9 @@
         {#if p.description}
           <div class="line-clamp-2 text-sm opacity-70">{p.description}</div>
         {/if}
+        {#if p.notes}
+          <div class="line-clamp-2 text-sm opacity-60">{p.notes}</div>
+        {/if}
       </div>
     </a>
   {/each}
@@ -84,6 +83,7 @@
       <tr class="font-medium">
         <th>{t("Name")}</th>
         <th>{t("Description")}</th>
+        <th>{t("Notes")}</th>
         <th class="w-24 pr-4 text-right">{t("Price")}</th>
       </tr>
     </thead>
@@ -94,12 +94,13 @@
             <a class="link" href={`/products/${p.id}`}>{p.name || p.id}</a>
           </td>
           <td class="max-w-[20rem] truncate opacity-70">{p.description || ""}</td>
+          <td class="max-w-[20rem] truncate opacity-70">{p.notes || ""}</td>
           <td class="pr-4 text-right font-medium">{fmtMoney(p.currency, getProductPrice(p))}</td>
         </tr>
       {/each}
       {#if products.length === 0}
         <tr>
-          <td colspan="3" class="py-10 text-center text-sm opacity-70">
+          <td colspan="4" class="py-10 text-center text-sm opacity-70">
             <span>
               {t("No products yet.")}
               <a href="/products/new" class="link">{t("Create your first product")}</a>.

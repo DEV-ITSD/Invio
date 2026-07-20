@@ -412,6 +412,7 @@ function ensureProductTables(database: DB): void {
   database.execute(`
     CREATE TABLE IF NOT EXISTS products (
       id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT,
+      notes TEXT,
       unit_price NUMERIC NOT NULL DEFAULT 0, sku TEXT,
       unit TEXT DEFAULT 'piece', category TEXT,
       tax_definition_id TEXT REFERENCES tax_definitions(id),
@@ -420,6 +421,7 @@ function ensureProductTables(database: DB): void {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  addColumnIfMissing(database, "products", "notes", "TEXT");
   database.execute(`
     CREATE TABLE IF NOT EXISTS product_categories (
       id TEXT PRIMARY KEY, code TEXT UNIQUE NOT NULL, name TEXT NOT NULL,

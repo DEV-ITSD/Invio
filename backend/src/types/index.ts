@@ -20,6 +20,7 @@ export interface Product {
   id: string;
   name: string;
   description?: string;
+  notes?: string;
   unitPrice: number;
   sku?: string;
   unit?: string; // piece, hour, day, kg, m, etc.
@@ -334,6 +335,7 @@ export interface CreateCustomerRequest {
 export interface CreateProductRequest {
   name: string;
   description?: string;
+  notes?: string;
   unitPrice: number;
   sku?: string;
   unit?: string;
