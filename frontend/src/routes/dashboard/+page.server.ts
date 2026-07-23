@@ -6,6 +6,7 @@ import { getVersion } from "$lib/version";
 type Invoice = {
   id: string;
   invoiceNumber: string;
+  customerId?: string;
   customer?: { name?: string };
   issueDate?: string | Date;
   updatedAt?: string | Date;
@@ -14,7 +15,16 @@ type Invoice = {
   total?: number;
 };
 
-export const load: PageServerLoad = async ({ locals, cookies }) => {
+function getInvoiceYear(value?: string | Date): string {
+  if (!value) return "";
+  const raw = String(value);
+  const match = raw.match(/^(\d{4})/);
+  if (match) return match[1];
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : String(date.getFullYear());
+}
+
+export const load: PageServerLoad = async ({ locals, cookies, url }) => {
   if (!locals.user) {
     throw redirect(303, "/login");
   }
@@ -47,25 +57,47 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
       >,
     ]);
 
-    const currency = (invoices[0]?.currency as string) || "USD";
+    const years = [
+      ...new Set(
+        invoices
+          .map((invoice) => getInvoiceYear(invoice.issueDate))
+          .filter(Boolean),
+      ),
+    ].sort((a, b) => Number(b) - Number(a));
+    const requestedYear = url.searchParams.get("year") || "all";
+    const selectedYear = years.includes(requestedYear) ? requestedYear : "all";
+    const filteredInvoices =
+      selectedYear === "all"
+        ? invoices
+        : invoices.filter(
+            (invoice) => getInvoiceYear(invoice.issueDate) === selectedYear,
+          );
+    const filteredCustomerIds = new Set(
+      filteredInvoices.map((invoice) => invoice.customerId).filter(Boolean),
+    );
+
+    const currency =
+      (filteredInvoices[0]?.currency as string) ||
+      (invoices[0]?.currency as string) ||
+      "USD";
     const dateFormat = String(settings.dateFormat || "YYYY-MM-DD");
-    const billed = invoices.reduce((sum, i) => sum + (i.total || 0), 0);
-    const paid = invoices
+    const billed = filteredInvoices.reduce((sum, i) => sum + (i.total || 0), 0);
+    const paid = filteredInvoices
       .filter((i) => i.status === "paid" || i.status === "complete")
       .reduce((s, i) => s + (i.total || 0), 0);
-    const outstanding = invoices
+    const outstanding = filteredInvoices
       .filter((i) => i.status === "sent" || i.status === "overdue")
       .reduce((s, i) => s + (i.total || 0), 0);
     const status = {
-      draft: invoices.filter((i) => i.status === "draft").length,
-      sent: invoices.filter((i) => i.status === "sent").length,
-      complete: invoices.filter((i) => i.status === "complete").length,
-      paid: invoices.filter((i) => i.status === "paid").length,
-      overdue: invoices.filter((i) => i.status === "overdue").length,
-      voided: invoices.filter((i) => i.status === "voided").length,
+      draft: filteredInvoices.filter((i) => i.status === "draft").length,
+      sent: filteredInvoices.filter((i) => i.status === "sent").length,
+      complete: filteredInvoices.filter((i) => i.status === "complete").length,
+      paid: filteredInvoices.filter((i) => i.status === "paid").length,
+      overdue: filteredInvoices.filter((i) => i.status === "overdue").length,
+      voided: filteredInvoices.filter((i) => i.status === "voided").length,
     };
 
-    const recent = invoices
+    const recent = filteredInvoices
       .slice()
       .sort(
         (a, b) =>
@@ -75,12 +107,23 @@ export const load: PageServerLoad = async ({ locals, cookies }) => {
       .slice(0, 5);
 
     const version = getVersion();
+    const visibleCustomerCount = !canViewCustomers
+      ? 0
+      : selectedYear === "all"
+        ? customers.length
+        : filteredCustomerIds.size;
 
     return {
-      counts: { invoices: invoices.length, customers: customers.length },
+      counts: {
+        invoices: filteredInvoices.length,
+        customers: visibleCustomerCount,
+        totalCustomers: customers.length,
+      },
       money: { billed, paid, outstanding, currency },
       status,
       recent,
+      years,
+      selectedYear,
       version,
       dateFormat,
     };

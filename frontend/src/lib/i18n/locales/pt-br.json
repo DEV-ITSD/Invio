@@ -401,5 +401,18 @@
   "Automatic": "Automático",
   "Always show": "Sempre mostrar",
   "Decimal places": "Casas decimais",
-  "Support Email": "E-mail de suporte"
+  "Support Email": "E-mail de suporte",
+  "Filters": "Filtros",
+  "All document types": "Todos os tipos de documento",
+  "All customers": "Todos os clientes",
+  "All statuses": "Todos os status",
+  "All years": "Todos os anos",
+  "Year": "Ano",
+  "Document details": "Detalhes do documento",
+  "Customer details": "Detalhes do cliente",
+  "Financial details": "Detalhes financeiros",
+  "Created": "Criado",
+  "Pos.": "Pos.",
+  "Qty": "Qtd.",
+  "Total {{count}} customers": "Total de {{count}} clientes"
 }

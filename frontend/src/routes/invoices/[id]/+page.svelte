@@ -19,6 +19,9 @@
     Pencil,
     ChevronDown,
     Mail,
+    Building2,
+    CalendarDays,
+    CircleDollarSign,
   } from "lucide-svelte";
   import { enhance } from "$app/forms";
   import { page } from "$app/state";
@@ -62,6 +65,7 @@
 
   let emailEnabled = $derived(Boolean(data.emailEnabled));
   let canExport = $derived(hasPermission(user, "invoices", "export"));
+  let showItemTaxes = $derived(Boolean(invoice?.items?.some((item: any) => Array.isArray(item.taxes) && item.taxes.length > 0)));
 
   let defaultEmailSubject = $derived(invoice ? `${documentTitle} #${invoice.invoiceNumber || invoice.id}` : documentTitle);
   let defaultEmailTo = $derived(invoice?.customer?.email ?? "");
@@ -99,6 +103,19 @@
     const h = String(d.getHours()).padStart(2, "0");
     const m = String(d.getMinutes()).padStart(2, "0");
     return `${date} ${h}:${m}`;
+  }
+
+  function statusLabel(status?: string) {
+    if (!status) return "-";
+    const labels: Record<string, string> = {
+      draft: "Draft",
+      sent: "Sent",
+      complete: "Complete",
+      paid: "Paid",
+      overdue: "Overdue",
+      voided: "Voided",
+    };
+    return t(labels[status] || status);
   }
 
   function copyLink() {
@@ -451,97 +468,130 @@
 </div>
 
 {#if invoice}
-  <div class="mt-6 mb-8 grid grid-cols-1 gap-x-8 gap-y-4 text-sm md:grid-cols-2">
-    <div class="space-y-4">
-      <div>
-        <span class="mr-1 opacity-70">{t("Customer")}:</span>
-        {invoice.customer?.name || t("Unknown Customer")}
-      </div>
-      <div class="flex gap-1">
-        <span class="mr-1 opacity-70">{t("Address")}:</span>
-        <div class="whitespace-pre-line">
-          {#if invoice.customer?.address || invoice.customer?.city}
-            {[invoice.customer?.address, formatPostalCityLine(invoice.customer?.city, invoice.customer?.postalCode, invoice.customer?.countryCode, getLoc()?.postalCityFormat)]
-              .filter(Boolean)
-              .join("\n")}
-            {#if invoice.customer?.countryCode}
-              <br />{invoice.customer.countryCode}
-            {/if}
+  <div class="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-3">
+    <section class="card bg-base-100 border-base-300 border">
+      <div class="card-body gap-4 p-5">
+        <h2 class="card-title text-base"><CalendarDays size={18} /> {t("Document details")}</h2>
+        <dl class="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-x-4 gap-y-2 text-sm">
+          <dt class="opacity-60">{t("Document Type")}</dt>
+          <dd class="text-right font-medium">{documentTitle}</dd>
+          <dt class="opacity-60">{t("Invoice Number")}</dt>
+          <dd class="text-right font-medium break-all">{invoice.invoiceNumber || "-"}</dd>
+          <dt class="opacity-60">{t("Quote Number")}</dt>
+          <dd class="text-right font-medium break-all">{invoice.quoteNumber || "-"}</dd>
+          <dt class="opacity-60">{t("Status")}</dt>
+          <dd class="text-right font-medium">{statusLabel(invoice.status)}</dd>
+          <dt class="opacity-60">{t("Issue Date")}</dt>
+          <dd class="text-right font-medium">{fmtDate(invoice.issueDate) || "-"}</dd>
+          {#if invoice.documentType !== "receipt"}
+            <dt class="opacity-60">{t("Due Date")}</dt>
+            <dd class="text-right font-medium">{fmtDate(invoice.dueDate) || "-"}</dd>
           {/if}
+          <dt class="opacity-60">{t("Currency")}</dt>
+          <dd class="text-right font-medium">{invoice.currency || "-"}</dd>
+          <dt class="opacity-60">{t("Decimal places")}</dt>
+          <dd class="text-right font-medium">{invoice.decimalDisplay === "always" ? t("Always show") : t("Automatic")}</dd>
+          <dt class="opacity-60">{t("Created")}</dt>
+          <dd class="text-right font-medium">{invoice.createdAt ? fmtDateTime(new Date(invoice.createdAt)) : "-"}</dd>
+          <dt class="opacity-60">{t("Updated")}</dt>
+          <dd class="text-right font-medium">{invoice.updatedAt ? fmtDateTime(new Date(invoice.updatedAt)) : "-"}</dd>
+        </dl>
+      </div>
+    </section>
+
+    <section class="card bg-base-100 border-base-300 border">
+      <div class="card-body gap-4 p-5">
+        <h2 class="card-title text-base"><Building2 size={18} /> {t("Customer details")}</h2>
+        <dl class="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.4fr)] gap-x-4 gap-y-2 text-sm">
+          <dt class="opacity-60">{t("Customer")}</dt>
+          <dd class="text-right font-medium">{invoice.customer?.name || t("Unknown Customer")}</dd>
+          <dt class="opacity-60">{t("Customer type")}</dt>
+          <dd class="text-right font-medium">{invoice.customer?.customerType === "private" ? t("Private person") : t("Company customer")}</dd>
+          <dt class="opacity-60">{t("Contact Name")}</dt>
+          <dd class="text-right font-medium">{invoice.customer?.contactName || "-"}</dd>
+          <dt class="opacity-60">{t("Address")}</dt>
+          <dd class="text-right font-medium whitespace-pre-line">
+            {#if invoice.customer?.address || invoice.customer?.city}
+              {[invoice.customer?.address, formatPostalCityLine(invoice.customer?.city, invoice.customer?.postalCode, invoice.customer?.countryCode, getLoc()?.postalCityFormat)]
+                .filter(Boolean)
+                .join("\n")}
+              {#if invoice.customer?.countryCode}
+                <br />{invoice.customer.countryCode}
+              {/if}
+            {:else}
+              -
+            {/if}
+          </dd>
+          <dt class="opacity-60">{t("Email")}</dt>
+          <dd class="text-right font-medium break-all">{invoice.customer?.email || "-"}</dd>
+          <dt class="opacity-60">{t("Support Email")}</dt>
+          <dd class="text-right font-medium break-all">{invoice.customer?.supportEmail || "-"}</dd>
+          <dt class="opacity-60">{t("Phone")}</dt>
+          <dd class="text-right font-medium">{invoice.customer?.phone || "-"}</dd>
+          <dt class="opacity-60">{t("Tax ID")}</dt>
+          <dd class="text-right font-medium">{invoice.customer?.taxId || "-"}</dd>
+        </dl>
+      </div>
+    </section>
+
+    <section class="card bg-base-100 border-base-300 border">
+      <div class="card-body gap-4 p-5">
+        <h2 class="card-title text-base"><CircleDollarSign size={18} /> {t("Financial details")}</h2>
+        <dl class="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-2 text-sm">
+          <dt class="opacity-60">{t("Subtotal")}</dt>
+          <dd class="text-right font-medium">{fmtMoney(invoice.subtotal)}</dd>
+          <dt class="opacity-60">
+            {invoice.discountText || t("Discount")}
+            {#if Number(invoice.discountPercentage || 0) > 0}({invoice.discountPercentage}%){/if}
+          </dt>
+          <dd class="text-right font-medium">− {fmtMoney(invoice.discountAmount)}</dd>
+          <dt class="opacity-60">{invoice.taxMode === "none" && invoice.taxText ? invoice.taxText : t("Tax")}</dt>
+          <dd class="text-right font-medium">{fmtMoney(invoice.taxAmount)}</dd>
+          <dt class="border-base-300 mt-1 border-t pt-3 font-semibold">{t("Total")}</dt>
+          <dd class="border-base-300 mt-1 border-t pt-3 text-right text-lg font-bold">{fmtMoney(invoice.total)}</dd>
+        </dl>
+        <div class="border-base-200 grid grid-cols-2 gap-x-4 gap-y-2 border-t pt-4 text-xs">
+          <span class="opacity-60">{t("Tax mode")}</span>
+          <span class="text-right">{invoice.taxMode === "none" ? t("No tax") : invoice.taxMode === "line" ? t("Per line") : t("Invoice total")}</span>
+          <span class="opacity-60">{t("Tax rate")}</span>
+          <span class="text-right">{invoice.taxRate || 0}%</span>
+          <span class="opacity-60">{t("Prices include tax")}</span>
+          <span class="text-right">{invoice.pricesIncludeTax ? t("Yes") : t("No")}</span>
+          <span class="opacity-60">{t("Rounding")}</span>
+          <span class="text-right">{invoice.roundingMode === "total" ? t("Round on totals") : t("Round per line")}</span>
         </div>
       </div>
-      <div>
-        <span class="mr-1 opacity-70">{t("Issue Date")}:</span>
-        {fmtDate(invoice.issueDate) || "-"}
-      </div>
-      <div class="mt-4">
-        <span class="mr-1 opacity-70">{t("Subtotal")}:</span>
-        {fmtMoney(invoice.subtotal)}
-      </div>
-      {#if invoice.taxMode === "none" && String(invoice.taxText || "").trim()}
-        <div>
-          <span class="mr-1 opacity-70">{invoice.taxText}:</span>
-          {fmtMoney(0)}
-        </div>
+    </section>
+  </div>
+
+  <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+    <section class="bg-base-100 border-base-300 rounded-box border p-5">
+      <h2 class="mb-2 text-sm font-semibold">{t("Payment Terms")}</h2>
+      <div class="text-sm whitespace-pre-wrap opacity-80">{invoice.paymentTerms || "-"}</div>
+    </section>
+    <section class="bg-base-100 border-base-300 rounded-box border p-5">
+      <h2 class="mb-2 text-sm font-semibold">{t("Notes")}</h2>
+      <div class="text-sm whitespace-pre-wrap opacity-80">{invoice.notes || "-"}</div>
+    </section>
+  </div>
+
+  <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+    <div class="text-sm opacity-60">{invoice.items?.length || 0} {t("item(s)")}</div>
+    <div class="flex flex-wrap gap-2">
+      <a class="btn btn-sm btn-outline" href="/api/v1/invoices/{invoice.id}/html" target="_blank">
+        <FileCode2 size={16} />
+        {t("View HTML")}
+      </a>
+      <a class="btn btn-sm btn-primary" href="/api/v1/invoices/{invoice.id}/pdf" target="_blank">
+        <Download size={16} />
+        {t("Download PDF")}
+      </a>
+      {#if invoice.status && invoice.status !== "draft" && invoice.shareToken}
+        <a class="btn btn-sm btn-outline" href="/public/invoices/{invoice.shareToken}" target="_blank">
+          <ExternalLink size={16} />
+          {t("View public link")}
+        </a>
       {/if}
-
-      <div class="flex flex-wrap gap-1 text-xs opacity-60">
-        {t("Tax rate")}: {invoice.taxRate}% -
-        {t("Prices include tax")}: {invoice.pricesIncludeTax ? t("Yes") : t("No")} -
-        {t("Rounding")}: {t("Round per line")} -
-        {t("Tax mode")}:
-        {invoice.taxMode === "none" ? t("No tax") : invoice.taxMode === "line" ? t("Per line") : t("Invoice total")}
-      </div>
-
-      <div class="mt-4">
-        <span class="mr-1 opacity-70">{t("Total")}:</span>
-        <span class="font-bold">{fmtMoney(invoice.total)}</span>
-      </div>
-      <div>
-        <span class="mr-1 opacity-70">{t("Payment Terms")}:</span>
-        <span class="font-medium">{invoice.paymentTerms || "-"}</span>
-      </div>
-
-      <div class="pt-2 opacity-70">
-        {invoice.items?.length || 0}
-        {t("item(s)")}
-      </div>
-
-      <div class="flex flex-wrap gap-2 pt-4">
-        <a class="btn btn-sm btn-outline" href="/api/v1/invoices/{invoice.id}/html" target="_blank">
-          <FileCode2 size={16} />
-          {t("View HTML")}
-        </a>
-        <a class="btn btn-sm btn-primary" href="/api/v1/invoices/{invoice.id}/pdf" target="_blank">
-          <Download size={16} />
-          {t("Download PDF")}
-        </a>
-        {#if invoice.status && invoice.status !== "draft" && invoice.shareToken}
-          <a class="btn btn-sm btn-outline" href="/public/invoices/{invoice.shareToken}" target="_blank">
-            <ExternalLink size={16} />
-            {t("View public link")}
-          </a>
-        {/if}
-      </div>
-    </div>
-
-    <div class="space-y-4">
-      <div>
-        <span class="mr-1 opacity-70">{t("Email")}:</span>
-        {invoice.customer?.email || ""}
-      </div>
-      <div class="mt-4">
-        <span class="mr-1 opacity-70">{t("Due Date")}:</span>
-        {fmtDate(invoice.dueDate) || "-"}
-      </div>
-      <div>
-        <span class="mr-1 opacity-70">{t("Tax")}:</span>
-        {fmtMoney(invoice.taxAmount)}
-      </div>
-      <div>
-        <span class="mr-1 opacity-70">{invoice.discountText || t("Discount")}:</span>
-        {fmtMoney(invoice.discountAmount)}
-      </div>
     </div>
   </div>
 
@@ -551,21 +601,36 @@
         <table class="table-sm sm:table-md table w-full">
           <thead class="bg-base-200/50">
             <tr>
+              <th class="w-16 text-center">{t("Pos.")}</th>
               <th>{t("Description")}</th>
               <th class="text-center">{t("Qty")}</th>
               <th class="text-center">{t("Unit")}</th>
+              {#if showItemTaxes}<th class="text-center">{t("Tax")}</th>{/if}
               <th class="text-right">{t("Price")}</th>
               <th class="text-right">{t("Total")}</th>
             </tr>
           </thead>
           <tbody>
-            {#each invoice.items as item (item.id)}
+            {#each invoice.items as item, index (item.id)}
               <tr>
-                <td class="whitespace-pre-wrap">{item.description || t("Item")}</td>
+                <td class="text-center font-medium tabular-nums">{index + 1}</td>
+                <td class="whitespace-pre-wrap">
+                  <div>{item.description || t("Item")}</div>
+                  {#if item.notes}<div class="mt-1 text-xs opacity-60">{item.notes}</div>{/if}
+                </td>
                 <td class="text-center">{item.quantity}</td>
                 <td class="text-center">{item.unitName || item.unit || ""}</td>
+                {#if showItemTaxes}
+                  <td class="text-center">
+                    {#if item.taxes?.length}
+                      {item.taxes.map((tax: any) => `${tax.percent}%`).join(", ")}
+                    {:else}
+                      -
+                    {/if}
+                  </td>
+                {/if}
                 <td class="text-right">{fmtMoney(item.unitPrice)}</td>
-                <td class="text-right font-medium">{fmtMoney(item.quantity * item.unitPrice)}</td>
+                <td class="text-right font-medium">{fmtMoney(item.lineTotal ?? item.quantity * item.unitPrice)}</td>
               </tr>
             {/each}
           </tbody>

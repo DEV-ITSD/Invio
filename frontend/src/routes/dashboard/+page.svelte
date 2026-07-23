@@ -4,22 +4,30 @@
 
   let { data } = $props();
 
-  let t = getContext("i18n") as (key: string) => string;
+  let t = getContext("i18n") as (key: string, params?: Record<string, string | number>) => string;
   let numberFormat = $derived(data.localization?.numberFormat || "comma");
   let dateLocale = $derived(data.localization?.locale || "en");
   let statusCounts = $derived((data.status || {}) as Record<string, number>);
   let user = $derived(data.user);
   let canViewInvoices = $derived(user?.isAdmin || user?.permissions?.some((p) => p.resource === "invoices" && p.action === "read"));
   let canViewCustomers = $derived(user?.isAdmin || user?.permissions?.some((p) => p.resource === "customers" && p.action === "read"));
+  let selectedYear = $derived(data.selectedYear || "all");
+
+  function changeYear(event: Event) {
+    const value = (event.currentTarget as HTMLSelectElement).value;
+    const url = new URL(window.location.href);
+    if (value === "all") {
+      url.searchParams.delete("year");
+    } else {
+      url.searchParams.set("year", value);
+    }
+    window.location.href = url.toString();
+  }
 
   function fmtMoney(n: number) {
     const cur = data.money?.currency || "USD";
     try {
-      const locale = numberFormat === "period"
-        ? "de-DE"
-        : numberFormat === "swiss"
-          ? "de-CH"
-          : "en-US";
+      const locale = numberFormat === "period" ? "de-DE" : numberFormat === "swiss" ? "de-CH" : "en-US";
       return new Intl.NumberFormat(locale, {
         style: "currency",
         currency: cur,
@@ -30,8 +38,19 @@
   }
 </script>
 
-<div class="mb-4">
+<div class="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
   <h1 class="text-2xl font-semibold">{t("Dashboard")}</h1>
+  {#if canViewInvoices}
+    <label class="form-control w-full sm:w-48">
+      <div class="label py-1"><span class="label-text">{t("Year")}</span></div>
+      <select class="select select-bordered select-sm w-full" value={selectedYear} onchange={changeYear}>
+        <option value="all">{t("All years")}</option>
+        {#each data.years || [] as year (year)}
+          <option value={year}>{year}</option>
+        {/each}
+      </select>
+    </label>
+  {/if}
 </div>
 
 {#if data.error}
@@ -81,8 +100,13 @@
     <div class="card bg-base-100 border-base-300 rounded-box border">
       <div class="card-body p-4">
         <div class="text-xs opacity-70 sm:text-sm">{t("Customers")}</div>
-        <div class="text-2xl font-extrabold sm:text-3xl">
-          {data.counts.customers}
+        <div class="flex items-end justify-between gap-3">
+          <span class="text-2xl font-extrabold sm:text-3xl">{data.counts.customers}</span>
+          {#if selectedYear !== "all"}
+            <span class="pb-1 text-right text-xs opacity-60">
+              ({t("Total {{count}} customers", { count: data.counts.totalCustomers || 0 })})
+            </span>
+          {/if}
         </div>
       </div>
     </div>
