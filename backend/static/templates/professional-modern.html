@@ -343,6 +343,7 @@
     <div class="header">
       <div class="invoice-meta">
         <p><strong>{{labels.invoiceNumberShortLabel}}:</strong> {{invoiceNumber}}</p>
+        {{#quoteNumber}}<p><strong>{{labels.quoteNumberShortLabel}}:</strong> {{quoteNumber}}</p>{{/quoteNumber}}
         <p><strong>{{labels.invoiceDateLabel}}:</strong> {{issueDate}}</p>
         {{#dueDate}}<p><strong>{{labels.dueDateLabel}}:</strong> {{dueDate}}</p>{{/dueDate}}
         <p>

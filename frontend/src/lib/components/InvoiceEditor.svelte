@@ -23,6 +23,7 @@
   let form = $state({
     customerId: initInvoice?.customerId || "",
     invoiceNumber: initInvoice?.invoiceNumber ?? initNextInvoiceNumber,
+    quoteNumber: initInvoice?.quoteNumber ?? "",
     currency: initInvoice?.currency || initSettings.currency || "EUR",
     status: initInvoice?.status || "draft",
     documentType: initInvoice?.documentType || "invoice",
@@ -332,12 +333,21 @@
       </select>
     </label>
 
-    <label class="form-control">
-      <div class="label">
-        <span class="label-text">{t("Invoice Number")}</span>
-      </div>
-      <input type="text" class="input input-bordered w-full" placeholder={t("e.g. INV-2025-001")} bind:value={form.invoiceNumber} oninput={() => (invoiceNumberTouched = true)} />
-    </label>
+    <div class="space-y-3">
+      <label class="form-control">
+        <div class="label">
+          <span class="label-text">{t("Invoice Number")}</span>
+        </div>
+        <input type="text" class="input input-bordered w-full" placeholder={t("e.g. INV-2025-001")} bind:value={form.invoiceNumber} oninput={() => (invoiceNumberTouched = true)} />
+      </label>
+
+      <label class="form-control">
+        <div class="label">
+          <span class="label-text">{t("Quote Number")}</span>
+        </div>
+        <input type="text" class="input input-bordered w-full" bind:value={form.quoteNumber} />
+      </label>
+    </div>
 
     <label class="form-control">
       <div class="label">

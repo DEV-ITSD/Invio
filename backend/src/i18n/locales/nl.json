@@ -3,6 +3,8 @@
   "receiptTitle": "Kwitantie",
   "invoiceNumberLabel": "Factuurnummer",
   "invoiceNumberShortLabel": "Factuur #",
+  "quoteNumberLabel": "Offertenummer",
+  "quoteNumberShortLabel": "Offerte #",
   "invoiceDateLabel": "Factuurdatum",
   "dateLabel": "Datum",
   "dueDateLabel": "Vervaldatum",

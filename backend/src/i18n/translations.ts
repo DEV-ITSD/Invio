@@ -8,6 +8,8 @@ export type InvoiceLabels = {
   receiptTitle: string;
   invoiceNumberLabel: string;
   invoiceNumberShortLabel: string;
+  quoteNumberLabel: string;
+  quoteNumberShortLabel: string;
   invoiceDateLabel: string;
   dateLabel: string;
   dueDateLabel: string;
@@ -49,6 +51,8 @@ const REQUIRED_KEYS = [
   "receiptTitle",
   "invoiceNumberLabel",
   "invoiceNumberShortLabel",
+  "quoteNumberLabel",
+  "quoteNumberShortLabel",
   "invoiceDateLabel",
   "dateLabel",
   "dueDateLabel",

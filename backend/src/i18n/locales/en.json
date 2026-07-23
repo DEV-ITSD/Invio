@@ -3,6 +3,8 @@
   "receiptTitle": "Receipt",
   "invoiceNumberLabel": "Invoice Number",
   "invoiceNumberShortLabel": "Invoice #",
+  "quoteNumberLabel": "Quote Number",
+  "quoteNumberShortLabel": "Quote #",
   "invoiceDateLabel": "Invoice Date",
   "dateLabel": "Date",
   "dueDateLabel": "Due Date",

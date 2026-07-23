@@ -40,6 +40,7 @@ export type InvoiceTaxMode = "invoice" | "line" | "none";
 export interface Invoice {
   id: string;
   invoiceNumber: string;
+  quoteNumber?: string;
   customerId: string;
   issueDate: Date;
   dueDate?: Date;
@@ -274,6 +275,7 @@ export interface UpdateUserRequest {
 export interface CreateInvoiceRequest {
   customerId: string;
   invoiceNumber?: string;
+  quoteNumber?: string;
   issueDate?: string | Date;
   dueDate?: string | Date;
   currency?: string;
@@ -382,6 +384,7 @@ export interface TemplateContext {
 
   // Invoice info
   invoiceNumber: string;
+  quoteNumber?: string;
   issueDate: string;
   dueDate?: string;
   currency: string;

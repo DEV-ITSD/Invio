@@ -204,6 +204,12 @@ function ensureInvoiceColumns(database: DB): void {
   addColumnIfMissing(
     database,
     "invoices",
+    "quote_number",
+    "TEXT NOT NULL DEFAULT ''",
+  );
+  addColumnIfMissing(
+    database,
+    "invoices",
     "prices_include_tax",
     "BOOLEAN DEFAULT 0",
   );
@@ -523,6 +529,7 @@ function migrateInvoicesForVoided(database: DB): void {
       CREATE TABLE invoices_new (
         id TEXT PRIMARY KEY,
         invoice_number TEXT UNIQUE NOT NULL,
+        quote_number TEXT NOT NULL DEFAULT '',
         customer_id TEXT REFERENCES customers(id),
         issue_date DATE NOT NULL,
         due_date DATE,
@@ -699,7 +706,7 @@ function insertBuiltinTemplates(database: DB): void {
           const shouldActivate =
             activeRows.length === 0 ||
             Boolean(activeRows[0][0]) ||
-            (t.id === "swiss" && readAppVersion() === "2.1.1-swiss.15");
+            (t.id === "swiss" && readAppVersion() === "2.1.1-swiss.16");
           if (shouldActivate) {
             database.query(
               "UPDATE templates SET name = ?, html = ?, active_version_id = ?, updated_at = ? WHERE id = ?",

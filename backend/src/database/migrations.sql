@@ -60,6 +60,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_abbreviation_unique
 CREATE TABLE invoices (
   id TEXT PRIMARY KEY,
   invoice_number TEXT UNIQUE NOT NULL,
+  quote_number TEXT NOT NULL DEFAULT '',
   customer_id TEXT REFERENCES customers(id),
   issue_date DATE NOT NULL,
   due_date DATE,

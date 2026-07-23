@@ -3,6 +3,8 @@
   "receiptTitle": "Quittung",
   "invoiceNumberLabel": "Rechnungsnummer",
   "invoiceNumberShortLabel": "Rechnung #",
+  "quoteNumberLabel": "Offertennummer",
+  "quoteNumberShortLabel": "Offerten #",
   "invoiceDateLabel": "Rechnungsdatum",
   "dateLabel": "Datum",
   "dueDateLabel": "Fällig am",

@@ -370,6 +370,7 @@ function buildContext(
 
     // Invoice
     invoiceNumber: invoice.invoiceNumber,
+    quoteNumber: String(invoice.quoteNumber || "").trim() || undefined,
     issueDate: formatDate(invoice.issueDate, dateFormat)!,
     dueDate: formatDate(invoice.dueDate, dateFormat),
     currency,
