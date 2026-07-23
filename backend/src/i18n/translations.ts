@@ -17,6 +17,7 @@ export type InvoiceLabels = {
   referenceLabel: string;
   billToHeading: string;
   itemsHeading: string;
+  itemHeaderPosition: string;
   itemHeaderDescription: string;
   itemHeaderQuantity: string;
   itemHeaderQuantityShort: string;
@@ -60,6 +61,7 @@ const REQUIRED_KEYS = [
   "referenceLabel",
   "billToHeading",
   "itemsHeading",
+  "itemHeaderPosition",
   "itemHeaderDescription",
   "itemHeaderQuantity",
   "itemHeaderQuantityShort",

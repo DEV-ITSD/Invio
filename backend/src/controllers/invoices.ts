@@ -16,7 +16,9 @@ import {
 } from "../types/index.ts";
 import { generateShareToken, generateUUID } from "../utils/uuid.ts";
 import { normalizeDocumentType } from "../utils/documentType.ts";
+import { normalizeInvoiceDecimalDisplay } from "../utils/decimalDisplay.ts";
 import { normalizeTaxMode, resolveNoTaxText } from "../utils/taxMode.ts";
+import { getUnits } from "./productOptions.ts";
 
 type LineTaxInput = {
   percent: number;
@@ -353,6 +355,7 @@ export const createInvoice = (
     currency,
     status: data.status || "draft",
     documentType: normalizeDocumentType(data.documentType),
+    decimalDisplay: normalizeInvoiceDecimalDisplay(data.decimalDisplay),
     taxMode,
     taxText,
     templateId: templateSelection.template.id,
@@ -389,8 +392,8 @@ export const createInvoice = (
       payment_terms, notes, share_token, created_at, updated_at,
       prices_include_tax, rounding_mode, template_id, template_version_id,
       template_html_snapshot, document_type, tax_mode, tax_text, discount_text,
-      quote_number
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      quote_number, decimal_display
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       invoice.id,
       invoice.invoiceNumber,
@@ -420,6 +423,7 @@ export const createInvoice = (
       invoice.taxText || "",
       invoice.discountText || "",
       invoice.quoteNumber || "",
+      invoice.decimalDisplay,
     ],
   );
   recordStatusChange(db, invoiceId, invoice.status || "draft");
@@ -547,7 +551,7 @@ export const createInvoice = (
   return {
     ...invoice,
     customer,
-    items,
+    items: attachUnitNames(items),
     taxes: hasPerLineTaxes && perLineCalc
       ? perLineCalc.summary.map((s) => ({
         id: "",
@@ -569,7 +573,7 @@ export const getInvoices = (): Invoice[] => {
            payment_terms, notes, share_token, created_at, updated_at,
            prices_include_tax, rounding_mode, template_id, template_version_id,
            template_html_snapshot, document_type, tax_mode, tax_text, discount_text,
-           quote_number
+           quote_number, decimal_display
     FROM invoices
     ORDER BY created_at DESC
   `);
@@ -586,7 +590,7 @@ export const getInvoiceById = (id: string): InvoiceWithDetails | null => {
            payment_terms, notes, share_token, created_at, updated_at,
            prices_include_tax, rounding_mode, template_id, template_version_id,
            template_html_snapshot, document_type, tax_mode, tax_text, discount_text,
-           quote_number
+           quote_number, decimal_display
     FROM invoices
     WHERE id = ?
   `,
@@ -613,7 +617,7 @@ export const getInvoiceById = (id: string): InvoiceWithDetails | null => {
     [id],
   );
 
-  const items = itemsResult.map((row: unknown[]) => ({
+  const items = attachUnitNames(itemsResult.map((row: unknown[]) => ({
     id: row[0] as string,
     invoiceId: row[1] as string,
     productId: row[2] ? String(row[2]) : undefined,
@@ -624,7 +628,7 @@ export const getInvoiceById = (id: string): InvoiceWithDetails | null => {
     lineTotal: row[7] as number,
     notes: row[8] as string,
     sortOrder: row[9] as number,
-  }));
+  })));
 
   // Attach per-item taxes
   type ItemTaxRow = {
@@ -693,7 +697,7 @@ export const getInvoiceByShareToken = (
            payment_terms, notes, share_token, created_at, updated_at,
            prices_include_tax, rounding_mode, template_id, template_version_id,
            template_html_snapshot, document_type, tax_mode, tax_text, discount_text,
-           quote_number
+           quote_number, decimal_display
     FROM invoices
     WHERE share_token = ?
   `,
@@ -723,7 +727,7 @@ export const getInvoiceByShareToken = (
     [invoice.id],
   );
 
-  const items = itemsResult.map((row: unknown[]) => ({
+  const items = attachUnitNames(itemsResult.map((row: unknown[]) => ({
     id: row[0] as string,
     invoiceId: row[1] as string,
     productId: row[2] ? String(row[2]) : undefined,
@@ -734,7 +738,7 @@ export const getInvoiceByShareToken = (
     lineTotal: row[7] as number,
     notes: row[8] as string,
     sortOrder: row[9] as number,
-  }));
+  })));
 
   // Attach per-item taxes
   type ItemTaxRow2 = {
@@ -842,6 +846,7 @@ export const updateInvoice = async (
       "issueDate",
       "invoiceNumber",
       "quoteNumber",
+      "decimalDisplay",
       "templateId",
       "templateVersionId",
       "documentType",
@@ -975,7 +980,8 @@ export const updateInvoice = async (
       tax_mode = ?,
       tax_text = ?,
       discount_text = ?,
-      quote_number = ?
+      quote_number = ?,
+      decimal_display = ?
     WHERE id = ?
   `,
       [
@@ -1012,6 +1018,9 @@ export const updateInvoice = async (
         data.quoteNumber === undefined
           ? existing.quoteNumber || ""
           : String(data.quoteNumber ?? "").trim(),
+        data.decimalDisplay === undefined
+          ? existing.decimalDisplay
+          : normalizeInvoiceDecimalDisplay(data.decimalDisplay),
         id,
       ],
     );
@@ -1253,8 +1262,8 @@ export const duplicateInvoice = async (
       payment_terms, notes, share_token, created_at, updated_at,
       prices_include_tax, rounding_mode, template_id, template_version_id,
       template_html_snapshot, document_type, tax_mode, tax_text, discount_text,
-      quote_number
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      quote_number, decimal_display
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
       [
         newId,
@@ -1287,6 +1296,7 @@ export const duplicateInvoice = async (
         original.taxMode === "none" ? original.taxText || "" : "",
         original.discountText || "",
         original.quoteNumber || "",
+        normalizeInvoiceDecimalDisplay(original.decimalDisplay),
       ],
     );
     // Copy items
@@ -1509,6 +1519,7 @@ function mapRowToInvoice(row: unknown[]): Invoice {
     taxText: row[25] ? String(row[25]) : undefined,
     discountText: row[26] ? String(row[26]) : undefined,
     quoteNumber: row[27] ? String(row[27]) : undefined,
+    decimalDisplay: normalizeInvoiceDecimalDisplay(row[28]),
   };
 }
 
@@ -1542,7 +1553,7 @@ function getCustomerById(id: string) {
   let rows: unknown[][] = [];
   try {
     rows = db.query(
-      "SELECT id, name, contact_name, email, phone, address, country_code, tax_id, created_at, city, postal_code, pdf_name, customer_type FROM customers WHERE id = ?",
+      "SELECT id, name, contact_name, email, phone, address, country_code, tax_id, created_at, city, postal_code, pdf_name, customer_type, support_email FROM customers WHERE id = ?",
       [id],
     ) as unknown[][];
   } catch (_e) {
@@ -1575,7 +1586,26 @@ function getCustomerById(id: string) {
     postalCode: (row[10] ?? undefined) as string | undefined,
     pdfName: (row[11] ?? undefined) as string | undefined,
     customerType: row[12] === "private" ? "private" : "company",
+    supportEmail: (row[13] ?? undefined) as string | undefined,
   };
+}
+
+function attachUnitNames<T extends { unit?: string }>(
+  items: T[],
+): Array<T & { unitName?: string }> {
+  let names = new Map<string, string>();
+  try {
+    names = new Map(
+      getUnits().map((unit) => [unit.code.trim().toLowerCase(), unit.name]),
+    );
+  } catch {
+    // Unit names are a display enhancement; keep stored values on old schemas.
+  }
+  return items.map((item) => {
+    const code = typeof item.unit === "string" ? item.unit.trim() : "";
+    const unitName = code ? names.get(code.toLowerCase()) || code : undefined;
+    return { ...item, unitName };
+  });
 }
 
 function getSettings() {

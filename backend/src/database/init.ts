@@ -164,6 +164,7 @@ function ensureCustomerColumns(database: DB): void {
   addColumnIfMissing(database, "customers", "customer_number", "INTEGER");
   addColumnIfMissing(database, "customers", "customer_abbreviation", "TEXT");
   addColumnIfMissing(database, "customers", "pdf_name", "TEXT");
+  addColumnIfMissing(database, "customers", "support_email", "TEXT");
   addColumnIfMissing(
     database,
     "customers",
@@ -206,6 +207,12 @@ function ensureInvoiceColumns(database: DB): void {
     "invoices",
     "quote_number",
     "TEXT NOT NULL DEFAULT ''",
+  );
+  addColumnIfMissing(
+    database,
+    "invoices",
+    "decimal_display",
+    "TEXT NOT NULL DEFAULT 'automatic'",
   );
   addColumnIfMissing(
     database,
@@ -530,6 +537,7 @@ function migrateInvoicesForVoided(database: DB): void {
         id TEXT PRIMARY KEY,
         invoice_number TEXT UNIQUE NOT NULL,
         quote_number TEXT NOT NULL DEFAULT '',
+        decimal_display TEXT NOT NULL DEFAULT 'automatic',
         customer_id TEXT REFERENCES customers(id),
         issue_date DATE NOT NULL,
         due_date DATE,
@@ -706,7 +714,7 @@ function insertBuiltinTemplates(database: DB): void {
           const shouldActivate =
             activeRows.length === 0 ||
             Boolean(activeRows[0][0]) ||
-            (t.id === "swiss" && readAppVersion() === "2.1.1-swiss.17");
+            (t.id === "swiss" && readAppVersion() === "2.1.1-swiss.18");
           if (shouldActivate) {
             database.query(
               "UPDATE templates SET name = ?, html = ?, active_version_id = ?, updated_at = ? WHERE id = ?",

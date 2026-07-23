@@ -12,6 +12,7 @@
   "referenceLabel": "Referência",
   "billToHeading": "Cobrar de",
   "itemsHeading": "Detalhes da Fatura",
+  "itemHeaderPosition": "Pos.",
   "itemHeaderDescription": "Descrição",
   "itemHeaderQuantity": "Quantidade",
   "itemHeaderQuantityShort": "Qtd",

@@ -397,5 +397,9 @@
   "You are about to edit a sent/paid invoice. Ensure this is legally allowed in your jurisdiction. Continue?": "Je staat op het punt een verzonden/betaalde factuur te bewerken. Controleer of dit juridisch is toegestaan in jouw rechtsgebied. Doorgaan?",
   "password": "wachtwoord",
   "username": "gebruikersnaam",
-  "{{count}} item(s)": "{{count}} artikel(en)"
+  "{{count}} item(s)": "{{count}} artikel(en)",
+  "Automatic": "Automatisch",
+  "Always show": "Altijd tonen",
+  "Decimal places": "Decimalen",
+  "Support Email": "Support-e-mail"
 }

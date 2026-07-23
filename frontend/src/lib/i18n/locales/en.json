@@ -339,5 +339,9 @@
   "e.g. Bank Transfer, PayPal": "e.g. Bank Transfer, PayPal",
   "e.g. INV-2025-001": "e.g. INV-2025-001",
   "e.g. US, NL, DE": "e.g. US, NL, DE",
-  "item(s)": "item(s)"
+  "item(s)": "item(s)",
+  "Automatic": "Automatic",
+  "Always show": "Always show",
+  "Decimal places": "Decimal places",
+  "Support Email": "Support Email"
 }

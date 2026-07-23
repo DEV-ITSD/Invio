@@ -140,6 +140,7 @@
               {t("Invoice No")}{sortMarker("invoiceNumber")}
             </button>
           </th>
+          <th>{t("Document Type")}</th>
           {#if canViewCustomers}
             <th>
               <button type="button" class="btn btn-ghost btn-xs px-1 normal-case" onclick={() => handleSort("customer")}>
@@ -183,6 +184,11 @@
                 {#if inv.issueDate}
                   {new Date(inv.issueDate).toLocaleDateString(dateLocale, { year: "numeric", month: "short", day: "numeric" })}
                 {/if}
+              </div>
+            </td>
+            <td>
+              <div class="badge badge-outline badge-sm">
+                {inv.documentType === "receipt" ? t("Receipt") : t("Invoice")}
               </div>
             </td>
             {#if canViewCustomers}

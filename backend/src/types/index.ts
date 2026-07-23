@@ -17,6 +17,7 @@ export interface Customer {
   customerAbbreviation?: string; // 1-3 uppercase alphanumeric characters
   pdfName?: string; // safe customer-specific prefix used for downloaded PDF filenames
   customerType?: CustomerType;
+  supportEmail?: string; // optional customer-specific sender/support address for documents
 }
 
 export interface Product {
@@ -36,6 +37,7 @@ export interface Product {
 
 export type InvoiceDocumentType = "invoice" | "receipt";
 export type InvoiceTaxMode = "invoice" | "line" | "none";
+export type InvoiceDecimalDisplay = "automatic" | "always";
 
 export interface Invoice {
   id: string;
@@ -47,6 +49,7 @@ export interface Invoice {
   currency: string;
   status: "draft" | "sent" | "complete" | "paid" | "overdue" | "voided";
   documentType: InvoiceDocumentType;
+  decimalDisplay?: InvoiceDecimalDisplay;
   taxMode: InvoiceTaxMode;
   taxText?: string;
 
@@ -86,6 +89,7 @@ export interface InvoiceItem {
   description: string;
   quantity: number;
   unit?: string;
+  unitName?: string;
   unitPrice: number;
   lineTotal: number;
   notes?: string;
@@ -281,6 +285,7 @@ export interface CreateInvoiceRequest {
   currency?: string;
   status?: "draft" | "sent" | "complete" | "paid" | "overdue" | "voided";
   documentType?: InvoiceDocumentType;
+  decimalDisplay?: InvoiceDecimalDisplay;
   templateId?: string;
   templateVersionId?: string;
 
@@ -338,6 +343,7 @@ export interface CreateCustomerRequest {
   customerAbbreviation?: string;
   pdfName?: string;
   customerType?: CustomerType;
+  supportEmail?: string;
 }
 
 export interface CreateProductRequest {
@@ -412,6 +418,7 @@ export interface TemplateContext {
 
   // Items
   items: Array<{
+    position: number;
     description: string;
     quantity: number;
     unit?: string;

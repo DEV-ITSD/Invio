@@ -73,3 +73,140 @@ Deno.test("template context renders no quote row for an empty quote number", () 
   assertIncludes(html, "COMPANY Musterkunde");
   assertNotIncludes(html, "Offerten #");
 });
+
+Deno.test("customer support email replaces the company email in documents", () => {
+  const invoice = invoiceFixture("company");
+  invoice.customer.email = "billing@example.test";
+  invoice.customer.supportEmail = "vip-support@example.test";
+  invoice.templateHtmlSnapshot =
+    "{{companyEmail}}|{{customerEmail}}";
+
+  const html = buildInvoiceHTML(invoice, {
+    companyName: "Test AG",
+    companyEmail: "info@example.test",
+    currency: "CHF",
+  });
+
+  assertIncludes(html, "vip-support@example.test|billing@example.test");
+  assertNotIncludes(html, "info@example.test");
+});
+
+Deno.test("template items expose positions and resolved unit names", () => {
+  const invoice = invoiceFixture("company");
+  invoice.items = [
+    {
+      id: "item-1",
+      invoiceId: invoice.id,
+      description: "Beratung",
+      quantity: 1,
+      unit: "hour",
+      unitName: "Stunde",
+      unitPrice: 100,
+      lineTotal: 100,
+      sortOrder: 0,
+    },
+  ];
+  invoice.subtotal = 100;
+  invoice.total = 100;
+  invoice.templateHtmlSnapshot =
+    "{{#items}}{{position}}|{{unit}}|{{unitPrice}}{{/items}}";
+
+  const html = buildInvoiceHTML(invoice, {
+    companyName: "Test AG",
+    currency: "CHF",
+  });
+
+  assertIncludes(html, "1|Stunde|");
+  assertNotIncludes(html, "|hour|");
+});
+
+Deno.test("automatic decimal display hides decimals when all prices are whole", () => {
+  const invoice = invoiceFixture("company");
+  invoice.decimalDisplay = "automatic";
+  invoice.subtotal = 100;
+  invoice.total = 100;
+  invoice.items = [
+    {
+      id: "item-1",
+      invoiceId: invoice.id,
+      description: "Pauschale",
+      quantity: 1,
+      unitPrice: 100,
+      lineTotal: 100,
+      sortOrder: 0,
+    },
+  ];
+  invoice.templateHtmlSnapshot =
+    "{{subtotal}}|{{#items}}{{unitPrice}}|{{lineTotal}}{{/items}}|{{total}}";
+
+  const html = buildInvoiceHTML(
+    invoice,
+    { companyName: "Test AG", currency: "CHF" },
+    undefined,
+    undefined,
+    undefined,
+    "swiss",
+  );
+
+  assertNotIncludes(html, ".00");
+});
+
+Deno.test("always decimal display keeps currency decimals", () => {
+  const invoice = invoiceFixture("company");
+  invoice.decimalDisplay = "always";
+  invoice.subtotal = 100;
+  invoice.total = 100;
+  invoice.templateHtmlSnapshot = "{{subtotal}}|{{total}}";
+
+  const html = buildInvoiceHTML(
+    invoice,
+    { companyName: "Test AG", currency: "CHF" },
+    undefined,
+    undefined,
+    undefined,
+    "swiss",
+  );
+
+  assertIncludes(html, ".00");
+});
+
+Deno.test("automatic decimal display shows decimals for all prices when one is fractional", () => {
+  const invoice = invoiceFixture("company");
+  invoice.decimalDisplay = "automatic";
+  invoice.subtotal = 112.5;
+  invoice.total = 112.5;
+  invoice.items = [
+    {
+      id: "item-1",
+      invoiceId: invoice.id,
+      description: "Ganz",
+      quantity: 1,
+      unitPrice: 100,
+      lineTotal: 100,
+      sortOrder: 0,
+    },
+    {
+      id: "item-2",
+      invoiceId: invoice.id,
+      description: "Teil",
+      quantity: 1,
+      unitPrice: 12.5,
+      lineTotal: 12.5,
+      sortOrder: 1,
+    },
+  ];
+  invoice.templateHtmlSnapshot =
+    "{{#items}}{{unitPrice}}|{{lineTotal}};{{/items}}{{subtotal}}|{{total}}";
+
+  const html = buildInvoiceHTML(
+    invoice,
+    { companyName: "Test AG", currency: "CHF" },
+    undefined,
+    undefined,
+    undefined,
+    "swiss",
+  );
+
+  assertIncludes(html, "100.00");
+  assertIncludes(html, "12.50");
+});
