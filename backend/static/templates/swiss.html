@@ -255,14 +255,6 @@
                   ><span class="total-value">{{subtotal}}</span>
                 </div>
               </div>
-              {{#hasTaxText}}
-              <div class="total-row">
-                <div class="total-inner">
-                  <span class="total-label">{{taxText}}</span
-                  ><span class="total-value">{{zeroTaxAmount}}</span>
-                </div>
-              </div>
-              {{/hasTaxText}}
               {{#hasDiscount}}
               <div class="total-row">
                 <div class="total-inner">
@@ -272,7 +264,16 @@
                   ><span class="total-value">−{{discountAmount}}</span>
                 </div>
               </div>
-              {{/hasDiscount}} {{#hasTax}}
+              {{/hasDiscount}}
+              {{#hasTaxText}}
+              <div class="total-row">
+                <div class="total-inner">
+                  <span class="total-label">{{taxText}}</span
+                  ><span class="total-value">{{zeroTaxAmount}}</span>
+                </div>
+              </div>
+              {{/hasTaxText}}
+              {{#hasTax}}
               <div class="total-row">
                 <div class="total-inner">
                   <span class="total-label">{{labels.taxLabel}} ({{taxRate}}%)</span

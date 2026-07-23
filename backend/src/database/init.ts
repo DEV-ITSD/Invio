@@ -706,7 +706,7 @@ function insertBuiltinTemplates(database: DB): void {
           const shouldActivate =
             activeRows.length === 0 ||
             Boolean(activeRows[0][0]) ||
-            (t.id === "swiss" && readAppVersion() === "2.1.1-swiss.16");
+            (t.id === "swiss" && readAppVersion() === "2.1.1-swiss.17");
           if (shouldActivate) {
             database.query(
               "UPDATE templates SET name = ?, html = ?, active_version_id = ?, updated_at = ? WHERE id = ?",
