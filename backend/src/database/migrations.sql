@@ -49,6 +49,7 @@ CREATE TABLE customers (
   customer_abbreviation TEXT,
   pdf_name TEXT,
   customer_type TEXT NOT NULL DEFAULT 'company',
+  support_email TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -61,6 +62,7 @@ CREATE TABLE invoices (
   id TEXT PRIMARY KEY,
   invoice_number TEXT UNIQUE NOT NULL,
   quote_number TEXT NOT NULL DEFAULT '',
+  decimal_display TEXT NOT NULL DEFAULT 'automatic',
   customer_id TEXT REFERENCES customers(id),
   issue_date DATE NOT NULL,
   due_date DATE,
@@ -197,6 +199,8 @@ CREATE TABLE IF NOT EXISTS invoice_taxes (
 -- Invoice-level flags for tax pricing/rounding
 ALTER TABLE invoices ADD COLUMN prices_include_tax BOOLEAN DEFAULT 0;
 ALTER TABLE invoices ADD COLUMN rounding_mode TEXT DEFAULT 'line';
+ALTER TABLE invoices ADD COLUMN decimal_display TEXT NOT NULL DEFAULT 'automatic';
+ALTER TABLE customers ADD COLUMN support_email TEXT;
 
 -- Products table for reusable invoice items
 CREATE TABLE IF NOT EXISTS products (

@@ -28,6 +28,11 @@ import { getDefaultTemplate } from "../controllers/templates.ts";
 import { getInvoiceLabels } from "../i18n/translations.ts";
 import { normalizeDocumentType, resolveDocumentTitle } from "./documentType.ts";
 import { normalizeTaxMode } from "./taxMode.ts";
+import {
+  formatMoney,
+  type NumberFormat,
+  shouldShowPriceDecimals,
+} from "./priceFormatting.ts";
 // pdf-lib is used to embed XML attachments and tweak metadata after rendering
 
 // ---- Basic color helpers ----
@@ -202,32 +207,6 @@ function normalizeLogoUrlForRender(
   return value;
 }
 
-type NumberFormat = "comma" | "period" | "swiss";
-
-function formatMoney(
-  value: number,
-  currency: string,
-  numberFormat: NumberFormat = "comma",
-): string {
-  let locale: string;
-
-  if (numberFormat === "period") {
-    // 1.000,00
-    locale = "de-DE";
-  } else if (numberFormat === "swiss") {
-    // 1'000.00
-    locale = "de-CH";
-  } else {
-    // 1,000.00
-    locale = "en-US";
-  }
-
-  return new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency,
-  }).format(value);
-}
-
 async function _inlineLogoIfPossible(
   settings?: BusinessSettings,
 ): Promise<BusinessSettings | undefined> {
@@ -298,6 +277,14 @@ function buildContext(
   const showPaymentDetails = documentType === "invoice";
   const renderedLabels = { ...labels, invoiceTitle: documentTitle };
   const currency = invoice.currency || settings?.currency || "USD";
+  const showPriceDecimals = shouldShowPriceDecimals(invoice);
+  const money = (value: number) =>
+    formatMoney(
+      value,
+      currency,
+      numberFormat || "comma",
+      showPriceDecimals,
+    );
   const companyPostalCity = formatPostalCityLine(
     settings?.companyPostalCode,
     settings?.companyCity,
@@ -318,12 +305,8 @@ function buildContext(
       ? invoice.taxes.map((t) => ({
           label: `${taxLabel} ${t.percent}%`,
           percent: t.percent,
-          taxable: formatMoney(
-            t.taxableAmount,
-            currency,
-            numberFormat || "comma",
-          ),
-          amount: formatMoney(t.taxAmount, currency, numberFormat || "comma"),
+          taxable: money(t.taxableAmount),
+          amount: money(t.taxAmount),
         }))
       : undefined;
   // Fallback: synthesize a single-row summary from invoice-level taxRate
@@ -341,12 +324,8 @@ function buildContext(
       {
         label: `${taxLabel} ${percent}%`,
         percent,
-        taxable: formatMoney(taxableBase, currency, numberFormat || "comma"),
-        amount: formatMoney(
-          invoice.taxAmount,
-          currency,
-          numberFormat || "comma",
-        ),
+        taxable: money(taxableBase),
+        amount: money(invoice.taxAmount),
       },
     ];
   }
@@ -364,7 +343,7 @@ function buildContext(
     companyCity: (settings?.companyCity || "").trim() || undefined,
     companyPostalCode: (settings?.companyPostalCode || "").trim() || undefined,
     companyPostalCity,
-    companyEmail: settings?.companyEmail || "",
+    companyEmail: invoice.customer.supportEmail || settings?.companyEmail || "",
     companyPhone: settings?.companyPhone || "",
     companyTaxId: settings?.companyTaxId || "",
 
@@ -402,24 +381,26 @@ function buildContext(
     isPrivateCustomer: customerType === "private",
 
     // Items
-    items: invoice.items.map((i) => ({
+    items: invoice.items.map((i, index) => ({
+      position: index + 1,
       description: i.description,
       quantity: i.quantity,
       unit:
-        typeof i.unit === "string" && i.unit.trim().length > 0
-          ? i.unit.trim()
+        typeof (i.unitName || i.unit) === "string" &&
+            String(i.unitName || i.unit).trim().length > 0
+          ? String(i.unitName || i.unit).trim()
           : undefined,
-      unitPrice: formatMoney(i.unitPrice, currency, numberFormat || "comma"),
-      lineTotal: formatMoney(i.lineTotal, currency, numberFormat || "comma"),
+      unitPrice: money(i.unitPrice),
+      lineTotal: money(i.lineTotal),
       notes: i.notes,
     })),
     hasItemUnits,
 
     // Totals
-    subtotal: formatMoney(invoice.subtotal, currency, numberFormat || "comma"),
+    subtotal: money(invoice.subtotal),
     discountAmount:
       invoice.discountAmount > 0
-        ? formatMoney(invoice.discountAmount, currency, numberFormat || "comma")
+        ? money(invoice.discountAmount)
         : undefined,
     discountPercentage: invoice.discountPercentage || undefined,
     discountText: discountText || undefined,
@@ -427,22 +408,20 @@ function buildContext(
     taxRate: invoice.taxRate || undefined,
     taxAmount:
       invoice.taxAmount > 0
-        ? formatMoney(invoice.taxAmount, currency, numberFormat || "comma")
+        ? money(invoice.taxAmount)
         : undefined,
-    total: formatMoney(invoice.total, currency, numberFormat || "comma"),
+    total: money(invoice.total),
     taxSummary,
     hasTaxSummary: Boolean(taxSummary && taxSummary.length > 0),
     taxMode,
     taxText: taxText || undefined,
     zeroTaxAmount: taxText
-      ? formatMoney(0, currency, numberFormat || "comma")
+      ? money(0)
       : undefined,
     hasTaxText: Boolean(taxText),
     // Net subtotal (taxable base after discount, before tax) for convenience
-    netSubtotal: formatMoney(
+    netSubtotal: money(
       Math.max(0, (invoice.subtotal || 0) - (invoice.discountAmount || 0)),
-      currency,
-      numberFormat || "comma",
     ),
 
     // Flags

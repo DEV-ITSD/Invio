@@ -25,6 +25,7 @@ const mapRowToCustomer = (row: unknown[]): Customer => ({
   customerAbbreviation: (row[12] ?? undefined) as string | undefined,
   pdfName: (row[13] ?? undefined) as string | undefined,
   customerType: normalizeCustomerType(row[14]),
+  supportEmail: (row[15] ?? undefined) as string | undefined,
 });
 
 const normalizeCustomerType = (value: unknown): CustomerType =>
@@ -36,7 +37,7 @@ export const getCustomers = () => {
   let results: unknown[][] = [];
   try {
     results = db.query(
-      "SELECT id, name, contact_name, email, phone, address, country_code, tax_id, created_at, city, postal_code, customer_number, customer_abbreviation, pdf_name, customer_type FROM customers ORDER BY created_at DESC",
+      "SELECT id, name, contact_name, email, phone, address, country_code, tax_id, created_at, city, postal_code, customer_number, customer_abbreviation, pdf_name, customer_type, support_email FROM customers ORDER BY created_at DESC",
     ) as unknown[][];
   } catch (_e) {
     // fallback older schema
@@ -58,7 +59,7 @@ export const getCustomerById = (id: string): Customer | null => {
   let results: unknown[][] = [];
   try {
     results = db.query(
-      "SELECT id, name, contact_name, email, phone, address, country_code, tax_id, created_at, city, postal_code, customer_number, customer_abbreviation, pdf_name, customer_type FROM customers WHERE id = ?",
+      "SELECT id, name, contact_name, email, phone, address, country_code, tax_id, created_at, city, postal_code, customer_number, customer_abbreviation, pdf_name, customer_type, support_email FROM customers WHERE id = ?",
       [id],
     ) as unknown[][];
   } catch (_e) {
@@ -131,13 +132,14 @@ export const createCustomer = (data: CreateCustomerRequest): Customer => {
   );
   const pdfName = normalizeCustomerPdfName(data.pdfName);
   const customerType = normalizeCustomerType(data.customerType);
+  const supportEmail = toNullable(data.supportEmail);
   ensureUniqueCustomerAbbreviation(db, customerAbbreviation);
 
   try {
     db.query(
       `
-      INSERT INTO customers (id, name, contact_name, email, phone, address, country_code, tax_id, created_at, city, postal_code, customer_number, customer_abbreviation, pdf_name, customer_type)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO customers (id, name, contact_name, email, phone, address, country_code, tax_id, created_at, city, postal_code, customer_number, customer_abbreviation, pdf_name, customer_type, support_email)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
       [
         customerId,
@@ -155,11 +157,12 @@ export const createCustomer = (data: CreateCustomerRequest): Customer => {
         customerAbbreviation,
         pdfName,
         customerType,
+        supportEmail,
       ],
     );
   } catch (error) {
     // Do not silently discard requested fields on a constraint/schema error.
-    if (customerAbbreviation || pdfName) throw error;
+    if (customerAbbreviation || pdfName || supportEmail) throw error;
     // fallback older schema
     try {
       db.query(
@@ -208,6 +211,7 @@ export const createCustomer = (data: CreateCustomerRequest): Customer => {
     customerAbbreviation: customerAbbreviation ?? undefined,
     pdfName: pdfName ?? undefined,
     customerType,
+    supportEmail: supportEmail ?? undefined,
   };
 };
 
@@ -275,13 +279,17 @@ export const updateCustomer = (
     data.customerType === undefined
       ? existing.customerType
       : normalizeCustomerType(data.customerType);
+  const supportEmail =
+    data.supportEmail !== undefined
+      ? toNullable(data.supportEmail)
+      : (existing.supportEmail ?? null);
   ensureUniqueCustomerAbbreviation(db, customerAbbreviation, id);
 
   try {
     db.query(
       `
       UPDATE customers SET
-        name = ?, contact_name = ?, email = ?, phone = ?, address = ?, country_code = ?, tax_id = ?, city = ?, postal_code = ?, customer_abbreviation = ?, pdf_name = ?, customer_type = ?
+        name = ?, contact_name = ?, email = ?, phone = ?, address = ?, country_code = ?, tax_id = ?, city = ?, postal_code = ?, customer_abbreviation = ?, pdf_name = ?, customer_type = ?, support_email = ?
       WHERE id = ?
     `,
       [
@@ -297,12 +305,13 @@ export const updateCustomer = (
         customerAbbreviation,
         pdfName,
         customerType,
+        supportEmail,
         id,
       ],
     );
   } catch (error) {
     // Do not silently discard requested fields on a constraint/schema error.
-    if (customerAbbreviation || pdfName) throw error;
+    if (customerAbbreviation || pdfName || supportEmail) throw error;
     try {
       db.query(
         `

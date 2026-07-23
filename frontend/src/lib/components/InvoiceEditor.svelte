@@ -27,6 +27,7 @@
     currency: initInvoice?.currency || initSettings.currency || "EUR",
     status: initInvoice?.status || "draft",
     documentType: initInvoice?.documentType || "invoice",
+    decimalDisplay: initInvoice?.decimalDisplay || "automatic",
     templateId: initInvoice?.templateId || initSettings.templateId || "",
     templateVersionId: initInvoice?.templateVersionId || initSettings.templateVersionId || "",
     issueDate: initInvoice?.issueDate ? new Date(initInvoice.issueDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
@@ -333,21 +334,12 @@
       </select>
     </label>
 
-    <div class="space-y-3">
-      <label class="form-control">
-        <div class="label">
-          <span class="label-text">{t("Invoice Number")}</span>
-        </div>
-        <input type="text" class="input input-bordered w-full" placeholder={t("e.g. INV-2025-001")} bind:value={form.invoiceNumber} oninput={() => (invoiceNumberTouched = true)} />
-      </label>
-
-      <label class="form-control">
-        <div class="label">
-          <span class="label-text">{t("Quote Number")}</span>
-        </div>
-        <input type="text" class="input input-bordered w-full" bind:value={form.quoteNumber} />
-      </label>
-    </div>
+    <label class="form-control">
+      <div class="label">
+        <span class="label-text">{t("Invoice Number")}</span>
+      </div>
+      <input type="text" class="input input-bordered w-full" placeholder={t("e.g. INV-2025-001")} bind:value={form.invoiceNumber} oninput={() => (invoiceNumberTouched = true)} />
+    </label>
 
     <label class="form-control">
       <div class="label">
@@ -377,6 +369,23 @@
         <option value="complete">{t("Complete")}</option>
         <option value="overdue">{t("Overdue")}</option>
         <option value="voided">{t("Voided")}</option>
+      </select>
+    </label>
+
+    <label class="form-control">
+      <div class="label">
+        <span class="label-text">{t("Quote Number")}</span>
+      </div>
+      <input type="text" class="input input-bordered w-full" bind:value={form.quoteNumber} />
+    </label>
+
+    <label class="form-control">
+      <div class="label">
+        <span class="label-text">{t("Decimal places")}</span>
+      </div>
+      <select class="select select-bordered w-full" bind:value={form.decimalDisplay}>
+        <option value="automatic">{t("Automatic")}</option>
+        <option value="always">{t("Always show")}</option>
       </select>
     </label>
   </div>

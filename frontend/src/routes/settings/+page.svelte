@@ -73,7 +73,7 @@
       for (const [key, value] of Object.entries(current)) {
         if (key === "allowProtectedInvoiceChanges") {
           const normalized = Boolean(value);
-          const baselineNormalized = Boolean(baseline[key]);
+          const baselineNormalized = asBool(baseline[key]);
           if (normalized !== baselineNormalized) {
             payload[key] = normalized;
           }

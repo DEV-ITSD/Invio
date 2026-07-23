@@ -12,6 +12,7 @@
   "referenceLabel": "Referentie",
   "billToHeading": "Factureren aan",
   "itemsHeading": "Factuurdetails",
+  "itemHeaderPosition": "Pos.",
   "itemHeaderDescription": "Omschrijving",
   "itemHeaderQuantity": "Aantal",
   "itemHeaderQuantityShort": "Qty",

@@ -102,6 +102,8 @@
       .items tbody tr:last-child td { border-bottom: 2px solid var(--ink); }
       .description { font-weight: 700; }
       .item-note { color: var(--muted); font-size: 10px; margin-top: 2px; }
+      .position { width: 8%; white-space: nowrap; }
+      .center { text-align: center !important; }
       .right { text-align: right !important; }
       .number { white-space: nowrap; font-variant-numeric: tabular-nums; }
 
@@ -199,7 +201,6 @@
             {{#customerContactName}}<span>{{customerContactName}}</span>{{/customerContactName}}
             {{#customerAddress}}<span>{{{customerAddress}}}</span>{{/customerAddress}}
             {{#customerPostalCity}}<span>{{customerPostalCity}}</span>{{/customerPostalCity}}
-            {{#customerEmail}}<span>{{customerEmail}}</span>{{/customerEmail}}
             {{#customerPhone}}<span>{{customerPhone}}</span>{{/customerPhone}}
             {{#customerTaxId}}<span
               >{{labels.taxIdLabel}}: {{customerTaxId}}</span
@@ -211,10 +212,11 @@
       <table class="items">
         <thead>
           <tr>
+            <th class="position">{{labels.itemHeaderPosition}}</th>
             <th>{{labels.itemHeaderDescription}}</th>
-            <th class="right">{{labels.itemHeaderQuantityShort}}</th>
+            <th class="center">{{labels.itemHeaderQuantityShort}}</th>
             {{#hasItemUnits}}
-            <th class="right">{{labels.itemHeaderUnit}}</th>
+            <th class="center">{{labels.itemHeaderUnit}}</th>
             {{/hasItemUnits}}
             <th class="right">{{labels.itemHeaderUnitPrice}}</th>
             <th class="right">{{labels.itemHeaderAmount}}</th>
@@ -223,15 +225,16 @@
         <tbody>
           {{#items}}
           <tr>
+            <td class="position number">{{position}}</td>
             <td>
               <div class="description">{{description}}</div>
               {{#notes}}
               <div class="item-note">{{notes}}</div>
               {{/notes}}
             </td>
-            <td class="right number">{{quantity}}</td>
+            <td class="center number">{{quantity}}</td>
             {{#hasItemUnits}}
-            <td class="right">{{unit}}</td>
+            <td class="center">{{unit}}</td>
             {{/hasItemUnits}}
             <td class="right number">{{unitPrice}}</td>
             <td class="right number">{{lineTotal}}</td>

@@ -125,6 +125,8 @@
     .desc-main { font-weight: 600; font-size: 11px; color: var(--ink); }
     .desc-note { font-size: 9.5px; color: var(--ink-3); margin-top: 2px; font-style: italic; }
     .r { text-align: right; }
+    .c { text-align: center; }
+    .position { width: 8%; white-space: nowrap; }
     .mono { font-family: "Menlo", "Monaco", "Consolas", monospace; font-size: 10.5px; }
 
     /* ── Totals ─────────────────────────────────────── */
@@ -246,9 +248,10 @@
   <table class="items">
     <thead>
       <tr>
+        <th class="position">{{labels.itemHeaderPosition}}</th>
         <th>{{labels.itemHeaderDescription}}</th>
-        <th class="r">{{labels.itemHeaderQuantityShort}}</th>
-        {{#hasItemUnits}}<th class="r">{{labels.itemHeaderUnit}}</th>{{/hasItemUnits}}
+        <th class="c">{{labels.itemHeaderQuantityShort}}</th>
+        {{#hasItemUnits}}<th class="c">{{labels.itemHeaderUnit}}</th>{{/hasItemUnits}}
         <th class="r">{{labels.itemHeaderUnitPrice}}</th>
         <th class="r">{{labels.itemHeaderAmount}}</th>
       </tr>
@@ -256,12 +259,13 @@
     <tbody>
       {{#items}}
       <tr>
+        <td class="position mono">{{position}}</td>
         <td>
           <div class="desc-main">{{description}}</div>
           {{#notes}}<div class="desc-note">{{notes}}</div>{{/notes}}
         </td>
-        <td class="r mono">{{quantity}}</td>
-        {{#hasItemUnits}}<td class="r">{{unit}}</td>{{/hasItemUnits}}
+        <td class="c mono">{{quantity}}</td>
+        {{#hasItemUnits}}<td class="c">{{unit}}</td>{{/hasItemUnits}}
         <td class="r mono">{{unitPrice}}</td>
         <td class="r mono">{{lineTotal}}</td>
       </tr>

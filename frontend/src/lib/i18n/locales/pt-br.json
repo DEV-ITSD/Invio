@@ -397,5 +397,9 @@
   "You are about to edit a sent/paid invoice. Ensure this is legally allowed in your jurisdiction. Continue?": "Você está prestes a editar uma fatura enviada/paga. Garanta que isso seja legalmente permitido na sua jurisdição. Continuar?",
   "password": "senha",
   "username": "usuário",
-  "{{count}} item(s)": "{{count}} item(ns)"
+  "{{count}} item(s)": "{{count}} item(ns)",
+  "Automatic": "Automático",
+  "Always show": "Sempre mostrar",
+  "Decimal places": "Casas decimais",
+  "Support Email": "E-mail de suporte"
 }

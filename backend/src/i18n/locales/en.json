@@ -12,6 +12,7 @@
   "referenceLabel": "Reference",
   "billToHeading": "Bill To",
   "itemsHeading": "Invoice Details",
+  "itemHeaderPosition": "Pos.",
   "itemHeaderDescription": "Description",
   "itemHeaderQuantity": "Quantity",
   "itemHeaderQuantityShort": "Qty",

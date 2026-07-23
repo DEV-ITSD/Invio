@@ -87,6 +87,13 @@
     </div>
 
     <div class="form-control w-full">
+      <label class="label pb-1" for="supportEmail">
+        <span class="label-text">{t("Support Email")}</span>
+      </label>
+      <input type="email" id="supportEmail" name="supportEmail" class="input input-sm input-bordered w-full" />
+    </div>
+
+    <div class="form-control w-full">
       <label class="label pb-1" for="address">
         <span class="label-text">{t("Address")}</span>
       </label>

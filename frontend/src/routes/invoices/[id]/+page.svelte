@@ -552,7 +552,8 @@
           <thead class="bg-base-200/50">
             <tr>
               <th>{t("Description")}</th>
-              <th class="text-right">{t("Qty")}</th>
+              <th class="text-center">{t("Qty")}</th>
+              <th class="text-center">{t("Unit")}</th>
               <th class="text-right">{t("Price")}</th>
               <th class="text-right">{t("Total")}</th>
             </tr>
@@ -561,7 +562,8 @@
             {#each invoice.items as item (item.id)}
               <tr>
                 <td class="whitespace-pre-wrap">{item.description || t("Item")}</td>
-                <td class="text-right">{item.quantity}</td>
+                <td class="text-center">{item.quantity}</td>
+                <td class="text-center">{item.unitName || item.unit || ""}</td>
                 <td class="text-right">{fmtMoney(item.unitPrice)}</td>
                 <td class="text-right font-medium">{fmtMoney(item.quantity * item.unitPrice)}</td>
               </tr>

@@ -80,6 +80,10 @@
         <div class="font-medium">{c.email || "-"}</div>
       </div>
       <div>
+        <div class="mb-1 text-sm opacity-70">{t("Support Email")}</div>
+        <div class="font-medium">{c.supportEmail || "-"}</div>
+      </div>
+      <div>
         <div class="mb-1 text-sm opacity-70">{t("Phone")}</div>
         <div class="font-medium">{c.phone || "-"}</div>
       </div>

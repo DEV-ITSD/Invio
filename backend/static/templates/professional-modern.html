@@ -160,6 +160,8 @@
       .items-table td:last-child {
         text-align: right;
       }
+      .items-table .center { text-align: center; }
+      .items-table .position { width: 8%; white-space: nowrap; }
 
       .items-table tbody tr {
         border-bottom: 1px solid var(--border-color);
@@ -396,9 +398,10 @@
       <table class="items-table">
         <thead>
           <tr>
+            <th class="position">{{labels.itemHeaderPosition}}</th>
             <th>{{labels.itemHeaderDescription}}</th>
-            <th>{{labels.itemHeaderQuantityShort}}</th>
-            {{#hasItemUnits}}<th>{{labels.itemHeaderUnit}}</th>{{/hasItemUnits}}
+            <th class="center">{{labels.itemHeaderQuantityShort}}</th>
+            {{#hasItemUnits}}<th class="center">{{labels.itemHeaderUnit}}</th>{{/hasItemUnits}}
             <th>{{labels.itemHeaderUnitPrice}}</th>
             <th>{{labels.itemHeaderAmount}}</th>
           </tr>
@@ -406,12 +409,13 @@
         <tbody>
           {{#items}}
           <tr>
+            <td class="position">{{position}}</td>
             <td>
               <div class="item-description">{{description}}</div>
               {{#notes}}<div class="item-notes">{{notes}}</div>{{/notes}}
             </td>
-            <td class="quantity">{{quantity}}</td>
-            {{#hasItemUnits}}<td>{{unit}}</td>{{/hasItemUnits}}
+            <td class="quantity center">{{quantity}}</td>
+            {{#hasItemUnits}}<td class="center">{{unit}}</td>{{/hasItemUnits}}
             <td class="unit-price">{{unitPrice}}</td>
             <td class="line-total">{{lineTotal}}</td>
           </tr>
