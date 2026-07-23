@@ -332,7 +332,12 @@ export const createInvoice = (
 
   const now = new Date();
   const issueDate = data.issueDate ? new Date(data.issueDate) : now;
-  const dueDate = data.dueDate ? new Date(data.dueDate) : undefined;
+  const documentType = normalizeDocumentType(data.documentType);
+  const dueDate = documentType === "receipt"
+    ? undefined
+    : data.dueDate
+    ? new Date(data.dueDate)
+    : undefined;
 
   // Get default settings for currency and payment terms
   const currency = data.currency || settings.currency || "USD";
@@ -354,7 +359,7 @@ export const createInvoice = (
     dueDate,
     currency,
     status: data.status || "draft",
-    documentType: normalizeDocumentType(data.documentType),
+    documentType,
     decimalDisplay: normalizeInvoiceDecimalDisplay(data.decimalDisplay),
     taxMode,
     taxText,
@@ -946,6 +951,14 @@ export const updateInvoice = async (
   const nextDocumentType = data.documentType === undefined
     ? null
     : normalizeDocumentType(data.documentType);
+  const effectiveDocumentType = nextDocumentType ?? existing.documentType;
+  const updatedDueDate = effectiveDocumentType === "receipt"
+    ? null
+    : data.dueDate === null || data.dueDate === ""
+    ? null
+    : data.dueDate
+    ? new Date(data.dueDate)
+    : existing.dueDate;
   const templateSelection =
     data.templateId !== undefined || data.templateVersionId !== undefined
       ? resolveTemplateSelection(
@@ -987,11 +1000,7 @@ export const updateInvoice = async (
       [
         data.customerId ?? existing.customerId,
         data.issueDate ? new Date(data.issueDate) : existing.issueDate,
-        data.dueDate === null || data.dueDate === ""
-          ? null
-          : data.dueDate
-          ? new Date(data.dueDate)
-          : existing.dueDate,
+        updatedDueDate,
         data.currency ?? existing.currency,
         data.status ?? existing.status,
         totals.subtotal,
@@ -1270,7 +1279,7 @@ export const duplicateInvoice = async (
         generateDraftInvoiceNumber(),
         original.customerId,
         now,
-        original.dueDate || null,
+        original.documentType === "receipt" ? null : original.dueDate || null,
         original.currency,
         "draft",
         totals.subtotal,

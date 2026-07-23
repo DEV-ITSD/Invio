@@ -351,7 +351,10 @@ function buildContext(
     invoiceNumber: invoice.invoiceNumber,
     quoteNumber: String(invoice.quoteNumber || "").trim() || undefined,
     issueDate: formatDate(invoice.issueDate, dateFormat)!,
-    dueDate: formatDate(invoice.dueDate, dateFormat),
+    dueDate:
+      documentType === "receipt"
+        ? undefined
+        : formatDate(invoice.dueDate, dateFormat),
     currency,
     status: invoice.status,
     documentType,
@@ -393,6 +396,7 @@ function buildContext(
       unitPrice: money(i.unitPrice),
       lineTotal: money(i.lineTotal),
       notes: i.notes,
+      notesColspan: hasItemUnits ? 5 : 4,
     })),
     hasItemUnits,
 

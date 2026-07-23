@@ -78,8 +78,7 @@ Deno.test("customer support email replaces the company email in documents", () =
   const invoice = invoiceFixture("company");
   invoice.customer.email = "billing@example.test";
   invoice.customer.supportEmail = "vip-support@example.test";
-  invoice.templateHtmlSnapshot =
-    "{{companyEmail}}|{{customerEmail}}";
+  invoice.templateHtmlSnapshot = "{{companyEmail}}|{{customerEmail}}";
 
   const html = buildInvoiceHTML(invoice, {
     companyName: "Test AG",
@@ -103,21 +102,64 @@ Deno.test("template items expose positions and resolved unit names", () => {
       unitName: "Stunde",
       unitPrice: 100,
       lineTotal: 100,
+      notes: "Details zur Position",
       sortOrder: 0,
     },
   ];
   invoice.subtotal = 100;
   invoice.total = 100;
   invoice.templateHtmlSnapshot =
-    "{{#items}}{{position}}|{{unit}}|{{unitPrice}}{{/items}}";
+    "{{#items}}{{position}}|{{unit}}|{{notesColspan}}|{{unitPrice}}{{/items}}";
 
   const html = buildInvoiceHTML(invoice, {
     companyName: "Test AG",
     currency: "CHF",
   });
 
-  assertIncludes(html, "1|Stunde|");
+  assertIncludes(html, "1|Stunde|5|");
   assertNotIncludes(html, "|hour|");
+});
+
+Deno.test("item notes span from description through amount without a unit column", () => {
+  const invoice = invoiceFixture("company");
+  invoice.items = [
+    {
+      id: "item-1",
+      invoiceId: invoice.id,
+      description: "Pauschale",
+      quantity: 1,
+      unitPrice: 100,
+      lineTotal: 100,
+      notes: "Details über die ganze Breite",
+      sortOrder: 0,
+    },
+  ];
+  invoice.subtotal = 100;
+  invoice.total = 100;
+  invoice.templateHtmlSnapshot =
+    "{{#items}}{{notesColspan}}|{{notes}}{{/items}}";
+
+  const html = buildInvoiceHTML(invoice, {
+    companyName: "Test AG",
+    currency: "CHF",
+  });
+
+  assertIncludes(html, "4|Details über die ganze Breite");
+});
+
+Deno.test("receipts never render a stored due date", () => {
+  const invoice = invoiceFixture("company");
+  invoice.documentType = "receipt";
+  invoice.dueDate = new Date("2026-08-31T00:00:00.000Z");
+  invoice.templateHtmlSnapshot = "{{#dueDate}}{{dueDate}}{{/dueDate}}";
+
+  const html = buildInvoiceHTML(invoice, {
+    companyName: "Test AG",
+    currency: "CHF",
+    locale: "de",
+  });
+
+  assertNotIncludes(html, "31.08.2026");
 });
 
 Deno.test("automatic decimal display hides decimals when all prices are whole", () => {

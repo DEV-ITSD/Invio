@@ -25,10 +25,11 @@
   }
 
   let invoices = $derived(data.invoices || []);
+  const currentYear = String(new Date().getFullYear());
   let filterDocumentType = $state("all");
   let filterCustomer = $state("all");
   let filterStatus = $state("all");
-  let filterYear = $state("all");
+  let filterYear = $state(currentYear);
   let sortKey = $state<"invoiceNumber" | "documentType" | "customer" | "total" | "status" | "issueDate" | "updatedAt">("invoiceNumber");
   let sortDirection = $state<"asc" | "desc">("desc");
 
@@ -63,7 +64,7 @@
       .sort((a, b) => compareText(a.name, b.name));
   });
 
-  let yearOptions = $derived([...new Set(invoices.map((invoice) => invoiceYear(invoice.issueDate || invoice.issue_date)).filter(Boolean))].sort((a, b) => Number(b) - Number(a)));
+  let yearOptions = $derived([...new Set([currentYear, ...invoices.map((invoice) => invoiceYear(invoice.issueDate || invoice.issue_date)).filter(Boolean)])].sort((a, b) => Number(b) - Number(a)));
 
   function handleSort(key: "invoiceNumber" | "documentType" | "customer" | "total" | "status" | "issueDate" | "updatedAt") {
     if (sortKey === key) {

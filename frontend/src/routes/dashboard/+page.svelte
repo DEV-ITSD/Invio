@@ -16,11 +16,7 @@
   function changeYear(event: Event) {
     const value = (event.currentTarget as HTMLSelectElement).value;
     const url = new URL(window.location.href);
-    if (value === "all") {
-      url.searchParams.delete("year");
-    } else {
-      url.searchParams.set("year", value);
-    }
+    url.searchParams.set("year", value);
     window.location.href = url.toString();
   }
 
@@ -210,7 +206,9 @@
 {/if}
 
 {#if data.recent && data.recent.length > 0}
-  <h2 class="mb-3 text-xl font-semibold">{t("Recent Invoices")}</h2>
+  <h2 class="mb-3 text-xl font-semibold">
+    {t("Recent {{count}} Invoices", { count: data.recentInvoiceLimit || 5 })}
+  </h2>
   <div class="bg-base-100 border-base-300 rounded-box overflow-x-auto border">
     <table class="table-sm sm:table-md table w-full">
       <thead>

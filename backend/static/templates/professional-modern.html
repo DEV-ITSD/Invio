@@ -161,10 +161,24 @@
         text-align: right;
       }
       .items-table .center { text-align: center; }
-      .items-table .position { width: 8%; white-space: nowrap; }
+      .items-table .position { width: 5%; white-space: nowrap; }
 
       .items-table tbody tr {
         border-bottom: 1px solid var(--border-color);
+      }
+      .items-table tbody tr.has-notes {
+        border-bottom: 0;
+        page-break-after: avoid;
+      }
+      .items-table tbody tr.item-notes-row {
+        page-break-before: avoid;
+      }
+      .items-table tbody tr.item-notes-row td {
+        padding-top: 2px;
+      }
+      .items-table tbody td.item-notes-cell {
+        text-align: left;
+        font-weight: 400;
       }
 
       .items-table tbody tr:last-child {
@@ -408,17 +422,24 @@
         </thead>
         <tbody>
           {{#items}}
-          <tr>
+          <tr class="item-main-row{{#notes}} has-notes{{/notes}}">
             <td class="position">{{position}}</td>
             <td>
               <div class="item-description">{{description}}</div>
-              {{#notes}}<div class="item-notes">{{notes}}</div>{{/notes}}
             </td>
             <td class="quantity center">{{quantity}}</td>
             {{#hasItemUnits}}<td class="center">{{unit}}</td>{{/hasItemUnits}}
             <td class="unit-price">{{unitPrice}}</td>
             <td class="line-total">{{lineTotal}}</td>
           </tr>
+          {{#notes}}
+          <tr class="item-notes-row">
+            <td class="position"></td>
+            <td class="item-notes-cell" colspan="{{notesColspan}}">
+              <div class="item-notes">{{notes}}</div>
+            </td>
+          </tr>
+          {{/notes}}
           {{/items}}
         </tbody>
       </table>
