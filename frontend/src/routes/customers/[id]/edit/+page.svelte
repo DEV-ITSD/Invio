@@ -42,6 +42,16 @@
       </div>
 
       <div class="form-control w-full">
+        <label class="label pb-1" for="customerType">
+          <span class="label-text">{t("Customer type")}</span>
+        </label>
+        <select id="customerType" name="customerType" class="select select-sm select-bordered w-full" value={c.customerType || "company"}>
+          <option value="company">{t("Company customer")}</option>
+          <option value="private">{t("Private person")}</option>
+        </select>
+      </div>
+
+      <div class="form-control w-full">
         <label class="label pb-1" for="customerAbbreviation">
           <span class="label-text">{t("Customer Abbreviation")}</span>
         </label>

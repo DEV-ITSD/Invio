@@ -362,6 +362,7 @@ export const createInvoice = (
     subtotal: totals.subtotal,
     discountAmount: totals.discountAmount,
     discountPercentage: data.discountPercentage || 0,
+    discountText: String(data.discountText || "").trim(),
     taxRate: effectiveTaxRate,
     taxAmount: totals.taxAmount,
     total: totals.total,
@@ -386,8 +387,8 @@ export const createInvoice = (
       subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
       payment_terms, notes, share_token, created_at, updated_at,
       prices_include_tax, rounding_mode, template_id, template_version_id,
-      template_html_snapshot, document_type, tax_mode, tax_text
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      template_html_snapshot, document_type, tax_mode, tax_text, discount_text
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       invoice.id,
       invoice.invoiceNumber,
@@ -415,6 +416,7 @@ export const createInvoice = (
       invoice.documentType,
       invoice.taxMode,
       invoice.taxText || "",
+      invoice.discountText || "",
     ],
   );
   recordStatusChange(db, invoiceId, invoice.status || "draft");
@@ -563,7 +565,7 @@ export const getInvoices = (): Invoice[] => {
            subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
            payment_terms, notes, share_token, created_at, updated_at,
            prices_include_tax, rounding_mode, template_id, template_version_id,
-           template_html_snapshot, document_type, tax_mode, tax_text
+           template_html_snapshot, document_type, tax_mode, tax_text, discount_text
     FROM invoices
     ORDER BY created_at DESC
   `);
@@ -579,7 +581,7 @@ export const getInvoiceById = (id: string): InvoiceWithDetails | null => {
            subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
            payment_terms, notes, share_token, created_at, updated_at,
            prices_include_tax, rounding_mode, template_id, template_version_id,
-           template_html_snapshot, document_type, tax_mode, tax_text
+           template_html_snapshot, document_type, tax_mode, tax_text, discount_text
     FROM invoices
     WHERE id = ?
   `,
@@ -685,7 +687,7 @@ export const getInvoiceByShareToken = (
            subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
            payment_terms, notes, share_token, created_at, updated_at,
            prices_include_tax, rounding_mode, template_id, template_version_id,
-           template_html_snapshot, document_type, tax_mode, tax_text
+           template_html_snapshot, document_type, tax_mode, tax_text, discount_text
     FROM invoices
     WHERE share_token = ?
   `,
@@ -823,6 +825,7 @@ export const updateInvoice = async (
       "items",
       "discountAmount",
       "discountPercentage",
+      "discountText",
       "taxRate",
       "taxMode",
       "taxText",
@@ -963,7 +966,8 @@ export const updateInvoice = async (
       template_html_snapshot = COALESCE(?, template_html_snapshot),
       document_type = COALESCE(?, document_type),
       tax_mode = ?,
-      tax_text = ?
+      tax_text = ?,
+      discount_text = ?
     WHERE id = ?
   `,
       [
@@ -994,6 +998,9 @@ export const updateInvoice = async (
         nextDocumentType,
         nextTaxMode,
         nextTaxText,
+        data.discountText === undefined
+          ? existing.discountText || ""
+          : String(data.discountText).trim(),
         id,
       ],
     );
@@ -1234,8 +1241,8 @@ export const duplicateInvoice = async (
       subtotal, discount_amount, discount_percentage, tax_rate, tax_amount, total,
       payment_terms, notes, share_token, created_at, updated_at,
       prices_include_tax, rounding_mode, template_id, template_version_id,
-      template_html_snapshot, document_type, tax_mode, tax_text
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      template_html_snapshot, document_type, tax_mode, tax_text, discount_text
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
       [
         newId,
@@ -1266,6 +1273,7 @@ export const duplicateInvoice = async (
         original.documentType,
         original.taxMode,
         original.taxMode === "none" ? original.taxText || "" : "",
+        original.discountText || "",
       ],
     );
     // Copy items
@@ -1486,6 +1494,7 @@ function mapRowToInvoice(row: unknown[]): Invoice {
     documentType: normalizeDocumentType(row[23]),
     taxMode: normalizeTaxMode(row[24]),
     taxText: row[25] ? String(row[25]) : undefined,
+    discountText: row[26] ? String(row[26]) : undefined,
   };
 }
 

@@ -52,6 +52,8 @@ export const actions: Actions = {
       pdfName: String(form.get("pdfName") || "")
         .trim()
         .replace(/ +/g, " "),
+      customerType:
+        form.get("customerType") === "private" ? "private" : "company",
     };
 
     if (!payload.name) return fail(400, { error: "Name is required" });

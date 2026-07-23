@@ -48,6 +48,7 @@ CREATE TABLE customers (
   tax_id TEXT,
   customer_abbreviation TEXT,
   pdf_name TEXT,
+  customer_type TEXT NOT NULL DEFAULT 'company',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -69,6 +70,7 @@ CREATE TABLE invoices (
   subtotal NUMERIC NOT NULL DEFAULT 0,
   discount_amount NUMERIC DEFAULT 0,
   discount_percentage NUMERIC DEFAULT 0,
+  discount_text TEXT NOT NULL DEFAULT '',
   tax_rate NUMERIC DEFAULT 0,
   tax_amount NUMERIC DEFAULT 0,
   total NUMERIC NOT NULL,

@@ -353,6 +353,10 @@ function buildContext(
   const hasItemUnits = invoice.items.some(
     (i) => typeof i.unit === "string" && i.unit.trim().length > 0,
   );
+  const customerType = invoice.customer.customerType === "private"
+    ? "private"
+    : "company";
+  const discountText = String(invoice.discountText || "").trim();
   return {
     // Company
     companyName: settings?.companyName || "Your Company",
@@ -392,6 +396,9 @@ function buildContext(
       settings?.postalCityFormat,
     ),
     customerTaxId: invoice.customer.taxId,
+    customerType,
+    isCompanyCustomer: customerType === "company",
+    isPrivateCustomer: customerType === "private",
 
     // Items
     items: invoice.items.map((i) => ({
@@ -414,6 +421,8 @@ function buildContext(
         ? formatMoney(invoice.discountAmount, currency, numberFormat || "comma")
         : undefined,
     discountPercentage: invoice.discountPercentage || undefined,
+    discountText: discountText || undefined,
+    discountLabel: discountText || labels.discountLabel,
     taxRate: invoice.taxRate || undefined,
     taxAmount:
       invoice.taxAmount > 0

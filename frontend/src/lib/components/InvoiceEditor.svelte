@@ -9,6 +9,7 @@
   let initSettings = untrack(() => data?.settings || {});
   let initNextInvoiceNumber = untrack(() => data?.nextInvoiceNumber || "");
   let defaultTaxText = String(initSettings.defaultTaxText ?? "").trim();
+  let initialDiscountMode = Number(initInvoice?.discountPercentage || 0) > 0 ? "percentage" : Number(initInvoice?.discountAmount || 0) > 0 ? "amount" : "none";
   let t = getContext("i18n") as (key: string) => string;
   let loc = getContext("localization") as any;
 
@@ -32,11 +33,14 @@
     taxMode: initInvoice?.taxMode || "invoice",
     taxText: String(initInvoice?.taxText ?? "").trim() || defaultTaxText,
     taxRate: initInvoice?.taxRate || 0,
+    discountText: String(initInvoice?.discountText ?? ""),
     pricesIncludeTax: initInvoice?.pricesIncludeTax ? "true" : "false",
     roundingMode: initInvoice?.roundingMode || "line",
     paymentTerms: initInvoice?.paymentTerms ?? initSettings.paymentTerms ?? "",
     notes: initInvoice?.notes ?? initSettings.defaultNotes ?? "",
   });
+  let discountMode = $state(initialDiscountMode);
+  let discountValue = $state(initialDiscountMode === "percentage" ? Number(initInvoice?.discountPercentage || 0) : initialDiscountMode === "amount" ? Number(initInvoice?.discountAmount || 0) : 0);
 
   let items = $state(
     initInvoice?.items?.length
@@ -215,14 +219,27 @@
   }
 
   let subtotal = $derived(items.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0), 0));
+  let discountAmount = $derived.by(() => {
+    const value = Math.max(0, Number(discountValue) || 0);
+    const calculated = discountMode === "percentage" ? subtotal * (value / 100) : discountMode === "amount" ? value : 0;
+    return Math.min(calculated, subtotal);
+  });
+  let subtotalAfterDiscount = $derived(Math.max(0, subtotal - discountAmount));
   let tax = $derived(
     form.taxMode === "none"
       ? 0
       : form.taxMode === "invoice"
-        ? subtotal * ((Number(form.taxRate) || 0) / 100)
-        : items.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0) * ((Number(item.taxPercent) || 0) / 100), 0),
+        ? form.pricesIncludeTax === "true"
+          ? subtotalAfterDiscount - subtotalAfterDiscount / (1 + (Number(form.taxRate) || 0) / 100)
+          : subtotalAfterDiscount * ((Number(form.taxRate) || 0) / 100)
+        : items.reduce((sum, item) => {
+            const gross = (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0);
+            const afterDiscount = subtotal > 0 ? gross - discountAmount * (gross / subtotal) : gross;
+            const rate = (Number(item.taxPercent) || 0) / 100;
+            return sum + (form.pricesIncludeTax === "true" ? afterDiscount - afterDiscount / (1 + rate) : afterDiscount * rate);
+          }, 0),
   );
-  let total = $derived(form.pricesIncludeTax === "true" ? subtotal : subtotal + tax); // Simplified for visual parity
+  let total = $derived(form.pricesIncludeTax === "true" ? subtotalAfterDiscount : subtotalAfterDiscount + tax);
 
   async function handleSubmit(e: SubmitEvent | Event) {
     if (e && "preventDefault" in e) e.preventDefault();
@@ -236,6 +253,9 @@
         // typed one; otherwise let the backend assign it using the real customerId.
         invoiceNumber: !initInvoice && !invoiceNumberTouched ? undefined : form.invoiceNumber,
         pricesIncludeTax: form.pricesIncludeTax === "true",
+        discountPercentage: discountMode === "percentage" ? Number(discountValue) || 0 : 0,
+        discountAmount: discountMode === "amount" ? Number(discountValue) || 0 : 0,
+        discountText: discountMode === "none" ? "" : form.discountText.trim(),
         items: items.map((i) => ({
           productId: i.productId || undefined,
           description: i.description,
@@ -457,6 +477,14 @@
         <span>{t("Subtotal")}:</span>
         <span>{subtotal.toFixed(2)}</span>
       </div>
+      {#if discountAmount > 0}
+        <div class="flex w-48 justify-between gap-3">
+          <span>
+            {form.discountText.trim() || t("Discount")}{discountMode === "percentage" ? ` (${Number(discountValue) || 0}%)` : ""}:
+          </span>
+          <span>−{discountAmount.toFixed(2)}</span>
+        </div>
+      {/if}
       {#if form.taxMode === "none" && form.taxText.trim()}
         <div class="flex w-48 justify-between gap-3">
           <span>{form.taxText}</span>
@@ -485,6 +513,31 @@
       ><kbd class="kbd kbd-xs">Ctrl</kbd>+<kbd class="kbd kbd-xs">Enter</kbd>
       {t("Add item")}</span
     >
+  </div>
+
+  <div class={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${discountMode === "none" ? "lg:grid-cols-1" : "lg:grid-cols-3"}`}>
+    <label class="form-control">
+      <div class="label"><span class="label-text">{t("Discount type")}</span></div>
+      <select class="select select-bordered w-full" bind:value={discountMode}>
+        <option value="none">{t("No discount")}</option>
+        <option value="percentage">{t("Percentage")}</option>
+        <option value="amount">{t("Fixed amount")}</option>
+      </select>
+    </label>
+
+    {#if discountMode !== "none"}
+      <label class="form-control">
+        <div class="label">
+          <span class="label-text">{discountMode === "percentage" ? t("Discount (%)") : t("Discount amount")}</span>
+        </div>
+        <input type="number" class="input input-bordered w-full" bind:value={discountValue} step="any" min="0" max={discountMode === "percentage" ? 100 : undefined} />
+      </label>
+
+      <label class="form-control">
+        <div class="label"><span class="label-text">{t("Discount text")}</span></div>
+        <input type="text" class="input input-bordered w-full" bind:value={form.discountText} placeholder={t("Discount")} />
+      </label>
+    {/if}
   </div>
 
   <div class={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${form.taxMode === "none" ? "lg:grid-cols-2" : form.taxMode === "line" ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}>

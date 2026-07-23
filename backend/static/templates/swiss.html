@@ -105,12 +105,14 @@
       .right { text-align: right !important; }
       .number { white-space: nowrap; font-variant-numeric: tabular-nums; }
 
-      .totals-layout { display: table; width: 100%; margin-bottom: 22px; }
-      .totals-space, .totals { display: table-cell; width: 50%; vertical-align: top; }
+      .totals-layout { width: 100%; table-layout: fixed; border-collapse: collapse; margin-bottom: 22px; }
+      .totals-space-column { width: 35%; }
+      .totals-column { width: 65%; }
+      .totals-space, .totals { vertical-align: top; }
       .totals { padding-left: 26px; }
       .total-row { display: table; width: 100%; border-bottom: 1px solid var(--rule); }
       .total-inner { display: table-row; }
-      .total-label, .total-value { display: table-cell; padding: 6px 0; }
+      .total-label, .total-value { display: table-cell; padding: 9px 9px; }
       .total-label { color: var(--muted); }
       .total-value { text-align: right; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
       .grand { background: var(--accent-soft); border-bottom: 0; border-left: 3px solid var(--accent); }
@@ -180,28 +182,26 @@
             </div>
             {{/dueDate}}
           </div>
-          <span class="status">{{status}}</span>
         </div>
       </div>
-
+      <br /><br />
       <div class="address-grid">
         <div class="address-card">
           <div class="eyebrow">{{labels.billToHeading}}</div>
-          <div class="customer-name">{{customerName}}</div>
+          {{#isCompanyCustomer}}<div class="customer-name">{{customerName}}</div>{{/isCompanyCustomer}}
           <div class="address-details">
             {{#customerContactName}}<span>{{customerContactName}}</span>{{/customerContactName}}
-            {{#customerEmail}}<span>{{customerEmail}}</span>{{/customerEmail}}
-            {{#customerPhone}}<span>{{customerPhone}}</span>{{/customerPhone}}
             {{#customerAddress}}<span>{{{customerAddress}}}</span>{{/customerAddress}}
             {{#customerPostalCity}}<span>{{customerPostalCity}}</span>{{/customerPostalCity}}
-            {{#customerCountryCode}}<span>{{customerCountryCode}}</span>{{/customerCountryCode}}
+            {{#customerEmail}}<span>{{customerEmail}}</span>{{/customerEmail}}
+            {{#customerPhone}}<span>{{customerPhone}}</span>{{/customerPhone}}
             {{#customerTaxId}}<span
               >{{labels.taxIdLabel}}: {{customerTaxId}}</span
             >{{/customerTaxId}}
           </div>
         </div>
       </div>
-
+      <br /><br />
       <table class="items">
         <thead>
           <tr>
@@ -234,90 +234,95 @@
         </tbody>
       </table>
 
-      <div class="totals-layout">
-        <div class="totals-space"></div>
-        <div class="totals">
-          <div class="total-row">
-            <div class="total-inner">
-              <span class="total-label">{{labels.subtotalLabel}}</span
-              ><span class="total-value">{{subtotal}}</span>
-            </div>
-          </div>
-          {{#hasTaxText}}
-          <div class="total-row">
-            <div class="total-inner">
-              <span class="total-label">{{taxText}}</span
-              ><span class="total-value">{{zeroTaxAmount}}</span>
-            </div>
-          </div>
-          {{/hasTaxText}}
-          {{#hasDiscount}}
-          <div class="total-row">
-            <div class="total-inner">
-              <span class="total-label"
-                >{{labels.discountLabel}}{{#discountPercentage}}
-                ({{discountPercentage}}%){{/discountPercentage}}</span
-              ><span class="total-value">−{{discountAmount}}</span>
-            </div>
-          </div>
-          {{/hasDiscount}} {{#hasTax}}
-          <div class="total-row">
-            <div class="total-inner">
-              <span class="total-label">{{labels.taxLabel}} ({{taxRate}}%)</span
-              ><span class="total-value">{{taxAmount}}</span>
-            </div>
-          </div>
-          {{/hasTax}} {{#hasTaxSummary}}
-          <div class="tax-summary">
-            <div class="eyebrow">{{labels.taxSummaryHeading}}</div>
-            <table>
-              <thead>
-                <tr>
-                  <th>{{labels.taxLabel}}</th>
-                  <th>{{labels.taxableLabel}}</th>
-                  <th>{{labels.taxAmountLabel}}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {{#taxSummary}}
-                <tr>
-                  <td>{{label}}</td>
-                  <td>{{taxable}}</td>
-                  <td>{{amount}}</td>
-                </tr>
-                {{/taxSummary}}
-              </tbody>
-            </table>
-          </div>
-          {{/hasTaxSummary}}
-          <div class="total-row grand">
-            <div class="total-inner">
-              <span class="total-label">{{labels.totalLabel}}</span
-              ><span class="total-value">{{total}}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
+      <table class="totals-layout">
+        <colgroup>
+          <col class="totals-space-column" />
+          <col class="totals-column" />
+        </colgroup>
+        <tbody>
+          <tr>
+            <td class="totals-space"></td>
+            <td class="totals">
+              <div class="total-row">
+                <div class="total-inner">
+                  <span class="total-label">{{labels.subtotalLabel}}</span
+                  ><span class="total-value">{{subtotal}}</span>
+                </div>
+              </div>
+              {{#hasTaxText}}
+              <div class="total-row">
+                <div class="total-inner">
+                  <span class="total-label">{{taxText}}</span
+                  ><span class="total-value">{{zeroTaxAmount}}</span>
+                </div>
+              </div>
+              {{/hasTaxText}}
+              {{#hasDiscount}}
+              <div class="total-row">
+                <div class="total-inner">
+                  <span class="total-label"
+                    >{{discountLabel}}{{#discountPercentage}}
+                    ({{discountPercentage}}%){{/discountPercentage}}</span
+                  ><span class="total-value">−{{discountAmount}}</span>
+                </div>
+              </div>
+              {{/hasDiscount}} {{#hasTax}}
+              <div class="total-row">
+                <div class="total-inner">
+                  <span class="total-label">{{labels.taxLabel}} ({{taxRate}}%)</span
+                  ><span class="total-value">{{taxAmount}}</span>
+                </div>
+              </div>
+              {{/hasTax}} {{#hasTaxSummary}}
+              <div class="tax-summary">
+                <div class="eyebrow">{{labels.taxSummaryHeading}}</div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>{{labels.taxLabel}}</th>
+                      <th>{{labels.taxableLabel}}</th>
+                      <th>{{labels.taxAmountLabel}}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {{#taxSummary}}
+                    <tr>
+                      <td>{{label}}</td>
+                      <td>{{taxable}}</td>
+                      <td>{{amount}}</td>
+                    </tr>
+                    {{/taxSummary}}
+                  </tbody>
+                </table>
+              </div>
+              {{/hasTaxSummary}}
+              <div class="total-row grand">
+                <div class="total-inner">
+                  <span class="total-label">{{labels.totalLabel}}</span
+                  ><span class="total-value">{{total}}</span>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <br />
       {{#notes}}
       <div class="notes">
-        <div class="eyebrow">{{labels.notesHeading}}</div>
         <div class="notes-body">{{notes}}</div>
       </div>
       {{/notes}}
-
+      <br /><br />
       <!-- Invoice-only payment footer -->
       {{#isInvoice}}
       <div class="footer">
         {{#paymentTerms}}
         <p><strong>{{labels.paymentTermsLabel}}:</strong> {{paymentTerms}}</p>
-        {{/paymentTerms}} {{#paymentMethods}}
-        <p>
-          <strong>{{labels.paymentMethodsLabel}}:</strong> {{paymentMethods}}
-        </p>
-        {{/paymentMethods}} {{#bankAccount}}
+        {{/paymentTerms}}
+        {{#bankAccount}}
         <p><strong>{{labels.bankAccountLabel}}:</strong> {{bankAccount}}</p>
-        {{/bankAccount}} {{#companyTaxId}}
+        {{/bankAccount}}
+        {{#companyTaxId}}
         <p>{{labels.taxIdLabel}}: {{companyTaxId}}</p>
         {{/companyTaxId}}
       </div>

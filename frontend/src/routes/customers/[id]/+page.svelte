@@ -60,6 +60,10 @@
         <div class="font-medium">{c.name || "-"}</div>
       </div>
       <div>
+        <div class="mb-1 text-sm opacity-70">{t("Customer type")}</div>
+        <div class="font-medium">{c.customerType === "private" ? t("Private person") : t("Company customer")}</div>
+      </div>
+      <div>
         <div class="mb-1 text-sm opacity-70">{t("Customer Abbreviation")}</div>
         <div class="font-medium">{c.customerAbbreviation || "-"}</div>
       </div>

@@ -164,6 +164,12 @@ function ensureCustomerColumns(database: DB): void {
   addColumnIfMissing(database, "customers", "customer_number", "INTEGER");
   addColumnIfMissing(database, "customers", "customer_abbreviation", "TEXT");
   addColumnIfMissing(database, "customers", "pdf_name", "TEXT");
+  addColumnIfMissing(
+    database,
+    "customers",
+    "customer_type",
+    "TEXT NOT NULL DEFAULT 'company'",
+  );
   database.execute(
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_abbreviation_unique ON customers(customer_abbreviation COLLATE NOCASE) WHERE customer_abbreviation IS NOT NULL",
   );
@@ -226,6 +232,12 @@ function ensureInvoiceColumns(database: DB): void {
     database,
     "invoices",
     "tax_text",
+    "TEXT NOT NULL DEFAULT ''",
+  );
+  addColumnIfMissing(
+    database,
+    "invoices",
+    "discount_text",
     "TEXT NOT NULL DEFAULT ''",
   );
 
@@ -519,6 +531,7 @@ function migrateInvoicesForVoided(database: DB): void {
         subtotal NUMERIC NOT NULL DEFAULT 0,
         discount_amount NUMERIC DEFAULT 0,
         discount_percentage NUMERIC DEFAULT 0,
+        discount_text TEXT NOT NULL DEFAULT '',
         tax_rate NUMERIC DEFAULT 0,
         tax_amount NUMERIC DEFAULT 0,
         total NUMERIC NOT NULL,
@@ -684,7 +697,9 @@ function insertBuiltinTemplates(database: DB): void {
               ) as unknown[][])
             : [];
           const shouldActivate =
-            activeRows.length === 0 || Boolean(activeRows[0][0]);
+            activeRows.length === 0 ||
+            Boolean(activeRows[0][0]) ||
+            (t.id === "swiss" && readAppVersion() === "2.1.1-swiss.15");
           if (shouldActivate) {
             database.query(
               "UPDATE templates SET name = ?, html = ?, active_version_id = ?, updated_at = ? WHERE id = ?",
