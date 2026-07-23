@@ -1,3 +1,5 @@
+export type CustomerType = "company" | "private";
+
 export interface Customer {
   id: string;
   name: string;
@@ -14,6 +16,7 @@ export interface Customer {
   customerNumber?: number; // permanent sequential number, assigned at creation
   customerAbbreviation?: string; // 1-3 uppercase alphanumeric characters
   pdfName?: string; // safe customer-specific prefix used for downloaded PDF filenames
+  customerType?: CustomerType;
 }
 
 export interface Product {
@@ -50,6 +53,7 @@ export interface Invoice {
   subtotal: number;
   discountAmount: number;
   discountPercentage: number;
+  discountText?: string;
   taxRate: number;
   taxAmount: number;
   total: number;
@@ -281,6 +285,7 @@ export interface CreateInvoiceRequest {
   // Totals (optional, will be calculated if not provided)
   discountAmount?: number;
   discountPercentage?: number;
+  discountText?: string;
   taxRate?: number;
   taxDefinitionId?: string | null;
   taxMode?: InvoiceTaxMode;
@@ -330,6 +335,7 @@ export interface CreateCustomerRequest {
   taxId?: string;
   customerAbbreviation?: string;
   pdfName?: string;
+  customerType?: CustomerType;
 }
 
 export interface CreateProductRequest {
@@ -397,6 +403,9 @@ export interface TemplateContext {
   customerCountryCode?: string;
   customerPostalCity?: string;
   customerTaxId?: string;
+  customerType: CustomerType;
+  isCompanyCustomer: boolean;
+  isPrivateCustomer: boolean;
 
   // Items
   items: Array<{
@@ -413,6 +422,8 @@ export interface TemplateContext {
   subtotal: string;
   discountAmount?: string;
   discountPercentage?: number;
+  discountText?: string;
+  discountLabel: string;
   taxRate?: number; // kept for backward compatibility (single-rate mode)
   taxAmount?: string; // kept for backward compatibility
   total: string;

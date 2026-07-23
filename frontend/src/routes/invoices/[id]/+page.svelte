@@ -539,7 +539,7 @@
         {fmtMoney(invoice.taxAmount)}
       </div>
       <div>
-        <span class="mr-1 opacity-70">{t("Discount")}:</span>
+        <span class="mr-1 opacity-70">{invoice.discountText || t("Discount")}:</span>
         {fmtMoney(invoice.discountAmount)}
       </div>
     </div>

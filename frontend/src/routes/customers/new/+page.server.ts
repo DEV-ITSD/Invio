@@ -41,6 +41,8 @@ export const actions: Actions = {
     const pdfName = String(form.get("pdfName") || "")
       .trim()
       .replace(/ +/g, " ");
+    const customerType =
+      form.get("customerType") === "private" ? "private" : "company";
 
     if (!name) {
       return fail(400, { error: "Name is required" });
@@ -75,6 +77,7 @@ export const actions: Actions = {
         countryCode: countryCode || undefined,
         customerAbbreviation: customerAbbreviation || undefined,
         pdfName: pdfName || undefined,
+        customerType,
       });
     } catch (e: any) {
       if (e && typeof e === "object" && "status" in e && "location" in e)

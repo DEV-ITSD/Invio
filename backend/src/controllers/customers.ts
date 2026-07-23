@@ -1,5 +1,9 @@
 import { getDatabase } from "../database/init.ts";
-import { CreateCustomerRequest, Customer } from "../types/index.ts";
+import {
+  CreateCustomerRequest,
+  Customer,
+  CustomerType,
+} from "../types/index.ts";
 import { generateUUID } from "../utils/uuid.ts";
 import { normalizeCustomerAbbreviation } from "../utils/customerAbbreviation.ts";
 import { normalizeCustomerPdfName } from "../utils/customerPdfName.ts";
@@ -20,7 +24,11 @@ const mapRowToCustomer = (row: unknown[]): Customer => ({
   customerNumber: (row[11] ?? undefined) as number | undefined,
   customerAbbreviation: (row[12] ?? undefined) as string | undefined,
   pdfName: (row[13] ?? undefined) as string | undefined,
+  customerType: normalizeCustomerType(row[14]),
 });
+
+const normalizeCustomerType = (value: unknown): CustomerType =>
+  value === "private" ? "private" : "company";
 
 export const getCustomers = () => {
   const db = getDatabase();
@@ -28,7 +36,7 @@ export const getCustomers = () => {
   let results: unknown[][] = [];
   try {
     results = db.query(
-      "SELECT id, name, contact_name, email, phone, address, country_code, tax_id, created_at, city, postal_code, customer_number, customer_abbreviation, pdf_name FROM customers ORDER BY created_at DESC",
+      "SELECT id, name, contact_name, email, phone, address, country_code, tax_id, created_at, city, postal_code, customer_number, customer_abbreviation, pdf_name, customer_type FROM customers ORDER BY created_at DESC",
     ) as unknown[][];
   } catch (_e) {
     // fallback older schema
@@ -50,7 +58,7 @@ export const getCustomerById = (id: string): Customer | null => {
   let results: unknown[][] = [];
   try {
     results = db.query(
-      "SELECT id, name, contact_name, email, phone, address, country_code, tax_id, created_at, city, postal_code, customer_number, customer_abbreviation, pdf_name FROM customers WHERE id = ?",
+      "SELECT id, name, contact_name, email, phone, address, country_code, tax_id, created_at, city, postal_code, customer_number, customer_abbreviation, pdf_name, customer_type FROM customers WHERE id = ?",
       [id],
     ) as unknown[][];
   } catch (_e) {
@@ -122,13 +130,14 @@ export const createCustomer = (data: CreateCustomerRequest): Customer => {
     data.customerAbbreviation,
   );
   const pdfName = normalizeCustomerPdfName(data.pdfName);
+  const customerType = normalizeCustomerType(data.customerType);
   ensureUniqueCustomerAbbreviation(db, customerAbbreviation);
 
   try {
     db.query(
       `
-      INSERT INTO customers (id, name, contact_name, email, phone, address, country_code, tax_id, created_at, city, postal_code, customer_number, customer_abbreviation, pdf_name)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO customers (id, name, contact_name, email, phone, address, country_code, tax_id, created_at, city, postal_code, customer_number, customer_abbreviation, pdf_name, customer_type)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
       [
         customerId,
@@ -145,6 +154,7 @@ export const createCustomer = (data: CreateCustomerRequest): Customer => {
         customerNumber,
         customerAbbreviation,
         pdfName,
+        customerType,
       ],
     );
   } catch (error) {
@@ -197,6 +207,7 @@ export const createCustomer = (data: CreateCustomerRequest): Customer => {
     customerNumber,
     customerAbbreviation: customerAbbreviation ?? undefined,
     pdfName: pdfName ?? undefined,
+    customerType,
   };
 };
 
@@ -260,13 +271,17 @@ export const updateCustomer = (
     data.pdfName !== undefined
       ? normalizeCustomerPdfName(data.pdfName)
       : (existing.pdfName ?? null);
+  const customerType =
+    data.customerType === undefined
+      ? existing.customerType
+      : normalizeCustomerType(data.customerType);
   ensureUniqueCustomerAbbreviation(db, customerAbbreviation, id);
 
   try {
     db.query(
       `
       UPDATE customers SET
-        name = ?, contact_name = ?, email = ?, phone = ?, address = ?, country_code = ?, tax_id = ?, city = ?, postal_code = ?, customer_abbreviation = ?, pdf_name = ?
+        name = ?, contact_name = ?, email = ?, phone = ?, address = ?, country_code = ?, tax_id = ?, city = ?, postal_code = ?, customer_abbreviation = ?, pdf_name = ?, customer_type = ?
       WHERE id = ?
     `,
       [
@@ -281,6 +296,7 @@ export const updateCustomer = (
         postal,
         customerAbbreviation,
         pdfName,
+        customerType,
         id,
       ],
     );
