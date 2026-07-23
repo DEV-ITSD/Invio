@@ -401,5 +401,18 @@
   "Automatic": "Automatisch",
   "Always show": "Altijd tonen",
   "Decimal places": "Decimalen",
-  "Support Email": "Support-e-mail"
+  "Support Email": "Support-e-mail",
+  "Filters": "Filters",
+  "All document types": "Alle documenttypen",
+  "All customers": "Alle klanten",
+  "All statuses": "Alle statussen",
+  "All years": "Alle jaren",
+  "Year": "Jaar",
+  "Document details": "Documentdetails",
+  "Customer details": "Klantdetails",
+  "Financial details": "Financiële details",
+  "Created": "Aangemaakt",
+  "Pos.": "Pos.",
+  "Qty": "Aantal",
+  "Total {{count}} customers": "Totaal {{count}} klanten"
 }

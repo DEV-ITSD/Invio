@@ -147,7 +147,7 @@
   {#if success}<div class="alert alert-success mb-4"><Check size={18} /><span>{success}</span></div>{/if}
 
   {#if template && !loading}
-    <div class="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(380px,0.9fr)]">
+    <div class="space-y-5">
       <section class="space-y-4">
         <div class="flex flex-wrap items-end justify-between gap-3">
           <label class="form-control min-w-52">
@@ -183,7 +183,7 @@
         <form onsubmit={saveVersion} class="space-y-3">
           <label class="form-control">
             <div class="label"><span class="label-text flex items-center gap-2"><Code2 size={16} /> HTML</span></div>
-            <textarea bind:value={editorHtml} class="textarea textarea-bordered h-[560px] w-full font-mono text-xs leading-5" spellcheck="false" required></textarea>
+            <textarea bind:value={editorHtml} class="textarea textarea-bordered min-h-[560px] w-full resize-y font-mono text-xs leading-5" spellcheck="false" required></textarea>
           </label>
           <label class="form-control">
             <div class="label"><span class="label-text">{t("Change description")}</span></div>
@@ -203,7 +203,7 @@
           <div class="card-body p-4">
             <h4 class="card-title text-base"><Eye size={17} /> {t("Preview")}</h4>
             {#if previewError}<div class="alert alert-error text-sm">{previewError}</div>{/if}
-            <iframe title={t("Template preview")} class="border-base-300 h-[610px] w-full rounded border bg-white" srcdoc={previewHtml} sandbox=""></iframe>
+            <iframe title={t("Template preview")} class="border-base-300 h-[850px] w-full rounded border bg-white" srcdoc={previewHtml} sandbox=""></iframe>
           </div>
         </section>
 
@@ -261,10 +261,10 @@
           >
         </div>
         <div class="border-base-300 bg-neutral text-neutral-content grid max-h-[520px] grid-cols-2 overflow-auto rounded border">
-          <pre class="m-0 min-w-0 border-r border-white/10 p-3 text-xs leading-5">{#each Array(maxLines) as _, index}<span class={linesA[index] !== linesB[index] ? "bg-error/25 block" : "block"}
-                >{String(index + 1).padStart(4, " ")}  {linesA[index] || ""}</span
+          <pre class="m-0 min-w-0 border-r border-white/10 p-3 text-xs leading-5">{#each Array(maxLines) as _, index (index)}<span
+                class={linesA[index] !== linesB[index] ? "bg-error/25 block" : "block"}>{String(index + 1).padStart(4, " ")}  {linesA[index] || ""}</span
               >{/each}</pre>
-          <pre class="m-0 min-w-0 p-3 text-xs leading-5">{#each Array(maxLines) as _, index}<span class={linesA[index] !== linesB[index] ? "bg-success/25 block" : "block"}
+          <pre class="m-0 min-w-0 p-3 text-xs leading-5">{#each Array(maxLines) as _, index (index)}<span class={linesA[index] !== linesB[index] ? "bg-success/25 block" : "block"}
                 >{String(index + 1).padStart(4, " ")}  {linesB[index] || ""}</span
               >{/each}</pre>
         </div>

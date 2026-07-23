@@ -401,5 +401,18 @@
   "Automatic": "Automatisch",
   "Always show": "Immer anzeigen",
   "Decimal places": "Kommastellen",
-  "Support Email": "Support E-Mail"
+  "Support Email": "Support E-Mail",
+  "Filters": "Filter",
+  "All document types": "Alle Dokumentarten",
+  "All customers": "Alle Kunden",
+  "All statuses": "Alle Status",
+  "All years": "Alle Jahre",
+  "Year": "Jahr",
+  "Document details": "Dokumentdetails",
+  "Customer details": "Kundendetails",
+  "Financial details": "Betragsdetails",
+  "Created": "Erstellt",
+  "Pos.": "Pos.",
+  "Qty": "Menge",
+  "Total {{count}} customers": "Total {{count}} Kunden"
 }

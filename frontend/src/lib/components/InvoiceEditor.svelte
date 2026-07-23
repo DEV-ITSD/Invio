@@ -398,12 +398,14 @@
       <input type="date" class="input input-bordered w-full" bind:value={form.issueDate} required />
     </label>
 
-    <label class="form-control">
-      <div class="label">
-        <span class="label-text">{t("Due Date")}</span>
-      </div>
-      <input type="date" class="input input-bordered w-full" bind:value={form.dueDate} />
-    </label>
+    {#if form.documentType !== "receipt"}
+      <label class="form-control">
+        <div class="label">
+          <span class="label-text">{t("Due Date")}</span>
+        </div>
+        <input type="date" class="input input-bordered w-full" bind:value={form.dueDate} />
+      </label>
+    {/if}
 
     <label class="form-control">
       <div class="label"><span class="label-text">{t("Template")}</span></div>

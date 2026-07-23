@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { ShieldOff, SquarePen } from "lucide-svelte";
+  import { Filter, RotateCcw, SquarePen } from "lucide-svelte";
   import { getContext } from "svelte";
 
   let { data } = $props();
 
-  let t = getContext("i18n") as (key: string) => string;
+  let t = getContext("i18n") as (key: string, params?: Record<string, string | number>) => string;
   let numberFormat = $derived(data.localization?.numberFormat || "comma");
   let dateLocale = $derived(data.localization?.locale || "en");
   let user = $derived(data.user);
@@ -14,11 +14,7 @@
   function fmtMoney(cur: string | undefined, n: number) {
     if (!cur) cur = "USD";
     try {
-      const locale = numberFormat === "period"
-        ? "de-DE"
-        : numberFormat === "swiss"
-          ? "de-CH"
-          : "en-US";
+      const locale = numberFormat === "period" ? "de-DE" : numberFormat === "swiss" ? "de-CH" : "en-US";
       return new Intl.NumberFormat(locale, {
         style: "currency",
         currency: cur,
@@ -29,8 +25,11 @@
   }
 
   let invoices = $derived(data.invoices || []);
+  let filterDocumentType = $state("all");
+  let filterCustomer = $state("all");
   let filterStatus = $state("all");
-  let sortKey = $state<"invoiceNumber" | "customer" | "total" | "status" | "issueDate" | "updatedAt">("invoiceNumber");
+  let filterYear = $state("all");
+  let sortKey = $state<"invoiceNumber" | "documentType" | "customer" | "total" | "status" | "issueDate" | "updatedAt">("invoiceNumber");
   let sortDirection = $state<"asc" | "desc">("desc");
 
   function toDateMs(v: unknown) {
@@ -44,7 +43,29 @@
     });
   }
 
-  function handleSort(key: "invoiceNumber" | "customer" | "total" | "status" | "issueDate" | "updatedAt") {
+  function invoiceYear(value: unknown) {
+    const raw = String(value || "");
+    const match = raw.match(/^(\d{4})/);
+    if (match) return match[1];
+    const date = new Date(raw);
+    return Number.isNaN(date.getTime()) ? "" : String(date.getFullYear());
+  }
+
+  let customerOptions = $derived.by(() => {
+    const customers: Record<string, string> = {};
+    for (const invoice of invoices) {
+      const id = String(invoice.customerId || "");
+      const name = String(invoice.customer?.name || "");
+      if (id && name) customers[id] = name;
+    }
+    return Object.entries(customers)
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => compareText(a.name, b.name));
+  });
+
+  let yearOptions = $derived([...new Set(invoices.map((invoice) => invoiceYear(invoice.issueDate || invoice.issue_date)).filter(Boolean))].sort((a, b) => Number(b) - Number(a)));
+
+  function handleSort(key: "invoiceNumber" | "documentType" | "customer" | "total" | "status" | "issueDate" | "updatedAt") {
     if (sortKey === key) {
       sortDirection = sortDirection === "asc" ? "desc" : "asc";
       return;
@@ -53,15 +74,18 @@
     sortDirection = key === "invoiceNumber" ? "desc" : "asc";
   }
 
-  function sortMarker(key: "invoiceNumber" | "customer" | "total" | "status" | "issueDate" | "updatedAt") {
+  function sortMarker(key: "invoiceNumber" | "documentType" | "customer" | "total" | "status" | "issueDate" | "updatedAt") {
     if (sortKey !== key) return "";
     return sortDirection === "asc" ? " ▲" : " ▼";
   }
 
   let filtered = $derived(
     invoices.filter((i) => {
-      if (filterStatus === "all") return true;
-      return i.status === filterStatus;
+      if (filterDocumentType !== "all" && i.documentType !== filterDocumentType) return false;
+      if (filterCustomer !== "all" && i.customerId !== filterCustomer) return false;
+      if (filterStatus !== "all" && i.status !== filterStatus) return false;
+      if (filterYear !== "all" && invoiceYear(i.issueDate || i.issue_date) !== filterYear) return false;
+      return true;
     }),
   );
 
@@ -70,6 +94,8 @@
       let result = 0;
       if (sortKey === "invoiceNumber") {
         result = compareText(a.invoiceNumber, b.invoiceNumber);
+      } else if (sortKey === "documentType") {
+        result = compareText(a.documentType, b.documentType);
       } else if (sortKey === "customer") {
         result = compareText(a.customer?.name, b.customer?.name);
       } else if (sortKey === "total") {
@@ -89,6 +115,13 @@
       return sortDirection === "asc" ? result : -result;
     }),
   );
+
+  function clearFilters() {
+    filterDocumentType = "all";
+    filterCustomer = "all";
+    filterStatus = "all";
+    filterYear = "all";
+  }
 
   // Show "Paid with" only when at least one visible (filtered) invoice has a payment method.
   // This hides the column automatically when filtering to statuses that can never carry one
@@ -113,13 +146,55 @@
 {/if}
 
 <div class="bg-base-100 border-base-300 rounded-box mb-4 overflow-x-auto border p-4">
-  <div class="flex gap-2">
-    <button class={`btn btn-sm ${filterStatus === "all" ? "btn-neutral" : "btn-ghost"}`} onclick={() => (filterStatus = "all")}>{t("All")}</button>
-    <button class={`btn btn-sm ${filterStatus === "sent" ? "btn-neutral" : "btn-ghost"}`} onclick={() => (filterStatus = "sent")}>{t("Sent")}</button>
-    <button class={`btn btn-sm ${filterStatus === "draft" ? "btn-neutral" : "btn-ghost"}`} onclick={() => (filterStatus = "draft")}>{t("Draft")}</button>
-    <button class={`btn btn-sm ${filterStatus === "complete" ? "btn-neutral" : "btn-ghost"}`} onclick={() => (filterStatus = "complete")}>{t("Complete")}</button>
-    <button class={`btn btn-sm ${filterStatus === "paid" ? "btn-neutral" : "btn-ghost"}`} onclick={() => (filterStatus = "paid")}>{t("Paid")}</button>
-    <button class={`btn btn-sm ${filterStatus === "voided" ? "btn-neutral" : "btn-ghost"}`} onclick={() => (filterStatus = "voided")}>{t("Voided")}</button>
+  <div class="mb-3 flex items-center gap-2 text-sm font-semibold">
+    <Filter size={16} />
+    {t("Filters")}
+  </div>
+  <div class="grid min-w-[44rem] grid-cols-4 items-end gap-3 xl:min-w-0 xl:grid-cols-[repeat(4,minmax(0,1fr))_auto]">
+    <label class="form-control">
+      <div class="label py-1"><span class="label-text">{t("Document Type")}</span></div>
+      <select class="select select-bordered select-sm w-full" bind:value={filterDocumentType}>
+        <option value="all">{t("All document types")}</option>
+        <option value="invoice">{t("Invoice")}</option>
+        <option value="receipt">{t("Receipt")}</option>
+      </select>
+    </label>
+    {#if canViewCustomers}
+      <label class="form-control">
+        <div class="label py-1"><span class="label-text">{t("Customer")}</span></div>
+        <select class="select select-bordered select-sm w-full" bind:value={filterCustomer}>
+          <option value="all">{t("All customers")}</option>
+          {#each customerOptions as customer (customer.id)}
+            <option value={customer.id}>{customer.name}</option>
+          {/each}
+        </select>
+      </label>
+    {/if}
+    <label class="form-control">
+      <div class="label py-1"><span class="label-text">{t("Status")}</span></div>
+      <select class="select select-bordered select-sm w-full" bind:value={filterStatus}>
+        <option value="all">{t("All statuses")}</option>
+        <option value="draft">{t("Draft")}</option>
+        <option value="sent">{t("Sent")}</option>
+        <option value="overdue">{t("Overdue")}</option>
+        <option value="paid">{t("Paid")}</option>
+        <option value="complete">{t("Complete")}</option>
+        <option value="voided">{t("Voided")}</option>
+      </select>
+    </label>
+    <label class="form-control">
+      <div class="label py-1"><span class="label-text">{t("Year")}</span></div>
+      <select class="select select-bordered select-sm w-full" bind:value={filterYear}>
+        <option value="all">{t("All years")}</option>
+        {#each yearOptions as year (year)}
+          <option value={year}>{year}</option>
+        {/each}
+      </select>
+    </label>
+    <button type="button" class="btn btn-ghost btn-sm" onclick={clearFilters}>
+      <RotateCcw size={15} />
+      {t("Clear filters")}
+    </button>
   </div>
 </div>
 
@@ -140,7 +215,11 @@
               {t("Invoice No")}{sortMarker("invoiceNumber")}
             </button>
           </th>
-          <th>{t("Document Type")}</th>
+          <th>
+            <button type="button" class="btn btn-ghost btn-xs px-1 normal-case" onclick={() => handleSort("documentType")}>
+              {t("Document Type")}{sortMarker("documentType")}
+            </button>
+          </th>
           {#if canViewCustomers}
             <th>
               <button type="button" class="btn btn-ghost btn-xs px-1 normal-case" onclick={() => handleSort("customer")}>

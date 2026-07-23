@@ -343,5 +343,17 @@
   "Automatic": "Automatic",
   "Always show": "Always show",
   "Decimal places": "Decimal places",
-  "Support Email": "Support Email"
+  "Support Email": "Support Email",
+  "Filters": "Filters",
+  "All document types": "All document types",
+  "All customers": "All customers",
+  "All statuses": "All statuses",
+  "All years": "All years",
+  "Year": "Year",
+  "Document details": "Document details",
+  "Customer details": "Customer details",
+  "Financial details": "Financial details",
+  "Created": "Created",
+  "Pos.": "Pos.",
+  "Total {{count}} customers": "Total {{count}} customers"
 }
