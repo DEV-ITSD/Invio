@@ -31,7 +31,7 @@
     templateId: initInvoice?.templateId || initSettings.templateId || "",
     templateVersionId: initInvoice?.templateVersionId || initSettings.templateVersionId || "",
     issueDate: initInvoice?.issueDate ? new Date(initInvoice.issueDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
-    dueDate: initInvoice?.dueDate ? new Date(initInvoice.dueDate).toISOString().slice(0, 10) : "",
+    dueDate: initInvoice?.documentType === "receipt" ? "" : initInvoice?.dueDate ? new Date(initInvoice.dueDate).toISOString().slice(0, 10) : "",
     taxMode: initInvoice?.taxMode || "invoice",
     taxText: String(initInvoice?.taxText ?? "").trim() || defaultTaxText,
     taxRate: initInvoice?.taxRate || 0,
@@ -91,6 +91,13 @@
     form.templateId = (event.currentTarget as HTMLSelectElement).value;
     const template = templates.find((item: any) => item.id === form.templateId);
     form.templateVersionId = template?.activeVersionId || template?.versions?.[0]?.id || "";
+  }
+
+  function changeDocumentType(event: Event) {
+    form.documentType = (event.currentTarget as HTMLSelectElement).value;
+    if (form.documentType === "receipt") {
+      form.dueDate = "";
+    }
   }
 
   function changeTaxMode(event: Event) {
@@ -251,6 +258,7 @@
     try {
       const payload = {
         ...form,
+        dueDate: form.documentType === "receipt" ? "" : form.dueDate,
         // Only send an explicit invoice number when creating if the user actually
         // typed one; otherwise let the backend assign it using the real customerId.
         invoiceNumber: !initInvoice && !invoiceNumberTouched ? undefined : form.invoiceNumber,
@@ -345,7 +353,7 @@
       <div class="label">
         <span class="label-text">{t("Document Type")}</span>
       </div>
-      <select class="select select-bordered w-full" bind:value={form.documentType}>
+      <select class="select select-bordered w-full" value={form.documentType} onchange={changeDocumentType}>
         <option value="invoice">{String(initSettings.invoiceDocumentTitle || "").trim() || t("Invoice")}</option>
         <option value="receipt">{String(initSettings.receiptDocumentTitle || "").trim() || t("Receipt")}</option>
       </select>
@@ -405,6 +413,8 @@
         </div>
         <input type="date" class="input input-bordered w-full" bind:value={form.dueDate} />
       </label>
+    {:else}
+      <div class="hidden sm:block" aria-hidden="true"></div>
     {/if}
 
     <label class="form-control">

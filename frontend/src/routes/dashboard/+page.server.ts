@@ -57,15 +57,22 @@ export const load: PageServerLoad = async ({ locals, cookies, url }) => {
       >,
     ]);
 
+    const currentYear = String(new Date().getFullYear());
     const years = [
-      ...new Set(
-        invoices
+      ...new Set([
+        currentYear,
+        ...invoices
           .map((invoice) => getInvoiceYear(invoice.issueDate))
           .filter(Boolean),
-      ),
+      ]),
     ].sort((a, b) => Number(b) - Number(a));
-    const requestedYear = url.searchParams.get("year") || "all";
-    const selectedYear = years.includes(requestedYear) ? requestedYear : "all";
+    const requestedYear = url.searchParams.has("year")
+      ? url.searchParams.get("year") || currentYear
+      : currentYear;
+    const selectedYear =
+      requestedYear === "all" || years.includes(requestedYear)
+        ? requestedYear
+        : currentYear;
     const filteredInvoices =
       selectedYear === "all"
         ? invoices
@@ -97,6 +104,10 @@ export const load: PageServerLoad = async ({ locals, cookies, url }) => {
       voided: filteredInvoices.filter((i) => i.status === "voided").length,
     };
 
+    const configuredRecentLimit = Number(settings.dashboardRecentInvoicesLimit);
+    const recentInvoiceLimit = Number.isFinite(configuredRecentLimit)
+      ? Math.min(50, Math.max(1, Math.trunc(configuredRecentLimit)))
+      : 5;
     const recent = filteredInvoices
       .slice()
       .sort(
@@ -104,7 +115,7 @@ export const load: PageServerLoad = async ({ locals, cookies, url }) => {
           new Date(b.updatedAt || b.issueDate || 0).getTime() -
           new Date(a.updatedAt || a.issueDate || 0).getTime(),
       )
-      .slice(0, 5);
+      .slice(0, recentInvoiceLimit);
 
     const version = getVersion();
     const visibleCustomerCount = !canViewCustomers
@@ -122,6 +133,7 @@ export const load: PageServerLoad = async ({ locals, cookies, url }) => {
       money: { billed, paid, outstanding, currency },
       status,
       recent,
+      recentInvoiceLimit,
       years,
       selectedYear,
       version,

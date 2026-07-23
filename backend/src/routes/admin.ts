@@ -335,6 +335,22 @@ function normalizeInvoiceProtectionSettingsPayload(
     : "false";
 }
 
+function normalizeDashboardSettingsPayload(data: Record<string, unknown>) {
+  if (
+    !Object.prototype.hasOwnProperty.call(
+      data,
+      "dashboardRecentInvoicesLimit",
+    )
+  ) {
+    return;
+  }
+  const raw = Number(data.dashboardRecentInvoicesLimit);
+  const normalized = Number.isFinite(raw)
+    ? Math.min(50, Math.max(1, Math.trunc(raw)))
+    : 5;
+  data.dashboardRecentInvoicesLimit = String(normalized);
+}
+
 // Demo mode flag (mutations allowed; periodic resets handle reverting state)
 const DEMO_MODE = isDemoMode();
 
@@ -1097,6 +1113,9 @@ adminRoutes.get("/settings", async (c) => {
   if (!map.allowProtectedInvoiceChanges) {
     map.allowProtectedInvoiceChanges = "false";
   }
+  if (!map.dashboardRecentInvoicesLimit) {
+    map.dashboardRecentInvoicesLimit = "5";
+  }
   // Expose demo mode to frontend UI
   (map as Record<string, unknown>).demoMode = DEMO_MODE ? "true" : "false";
   return c.json(map);
@@ -1121,6 +1140,7 @@ adminRoutes.put(
     normalizeTaxSettingsPayload(data);
     normalizeLocaleSettingPayload(data);
     normalizeInvoiceProtectionSettingsPayload(data);
+    normalizeDashboardSettingsPayload(data);
     const settings = await updateSettings(data);
     try {
       if ("logoUrl" in data) deleteSetting("logoUrl");
@@ -1167,6 +1187,7 @@ adminRoutes.patch(
     normalizeTaxSettingsPayload(data);
     normalizeLocaleSettingPayload(data);
     normalizeInvoiceProtectionSettingsPayload(data);
+    normalizeDashboardSettingsPayload(data);
     const settings = await updateSettings(data);
     if (typeof data.templateId === "string" && data.templateId) {
       try {
@@ -1243,6 +1264,9 @@ adminRoutes.get("/admin/settings", async (c) => {
   if (!map.allowProtectedInvoiceChanges) {
     map.allowProtectedInvoiceChanges = "false";
   }
+  if (!map.dashboardRecentInvoicesLimit) {
+    map.dashboardRecentInvoicesLimit = "5";
+  }
   // Expose demo mode to frontend UI for admin-prefixed route as well
   (map as Record<string, unknown>).demoMode = DEMO_MODE ? "true" : "false";
   return c.json(map);
@@ -1266,6 +1290,7 @@ adminRoutes.put(
     normalizeTaxSettingsPayload(data);
     normalizeLocaleSettingPayload(data);
     normalizeInvoiceProtectionSettingsPayload(data);
+    normalizeDashboardSettingsPayload(data);
     const settings = await updateSettings(data);
     try {
       if ("logoUrl" in data) deleteSetting("logoUrl");
@@ -1294,6 +1319,7 @@ adminRoutes.patch(
     normalizeTaxSettingsPayload(data);
     normalizeLocaleSettingPayload(data);
     normalizeInvoiceProtectionSettingsPayload(data);
+    normalizeDashboardSettingsPayload(data);
     const settings = await updateSettings(data);
     try {
       if ("logoUrl" in data) deleteSetting("logoUrl");

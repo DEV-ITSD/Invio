@@ -97,7 +97,8 @@ INSERT OR IGNORE INTO settings (key, value) VALUES
   ('paymentTerms', 'Due in 30 days'),
   ('defaultNotes', 'Thank you for your business!'),
   ('defaultTaxText', ''),
-  ('allowProtectedInvoiceChanges', 'false');
+  ('allowProtectedInvoiceChanges', 'false'),
+  ('dashboardRecentInvoicesLimit', '5');
 
 -- Insert a simple default template
 INSERT OR IGNORE INTO templates (id, name, html, is_default) VALUES 

@@ -24,6 +24,7 @@ INSERT OR IGNORE INTO settings (key, value) VALUES
   ('invoiceNumberPattern', ''),
   ('invoiceNumberingEnabled', 'true'),
   ('allowProtectedInvoiceChanges', 'false'),
+  ('dashboardRecentInvoicesLimit', '5'),
   ('embedXmlInHtml', 'false'),
   -- Optional PEPPOL endpoint configuration (leave empty if not applicable)
   ('peppolSellerEndpointId', ''),

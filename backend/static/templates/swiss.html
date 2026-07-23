@@ -99,10 +99,14 @@
         text-transform: uppercase;
       }
       .items td { padding: 8px; vertical-align: top; border-bottom: 1px solid var(--rule); }
+      .items tbody tr.has-notes td { border-bottom: 0; padding-bottom: 2px; }
+      .items tbody tr.has-notes { page-break-after: avoid; }
+      .items tbody tr.item-notes-row { page-break-before: avoid; }
+      .items tbody tr.item-notes-row td { padding-top: 2px; }
       .items tbody tr:last-child td { border-bottom: 2px solid var(--ink); }
       .description { font-weight: 700; }
       .item-note { color: var(--muted); font-size: 10px; margin-top: 2px; }
-      .position { width: 8%; white-space: nowrap; }
+      .position { width: 5%; white-space: nowrap; }
       .center { text-align: center !important; }
       .right { text-align: right !important; }
       .number { white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -224,13 +228,10 @@
         </thead>
         <tbody>
           {{#items}}
-          <tr>
+          <tr class="item-main-row{{#notes}} has-notes{{/notes}}">
             <td class="position number">{{position}}</td>
             <td>
               <div class="description">{{description}}</div>
-              {{#notes}}
-              <div class="item-note">{{notes}}</div>
-              {{/notes}}
             </td>
             <td class="center number">{{quantity}}</td>
             {{#hasItemUnits}}
@@ -239,6 +240,14 @@
             <td class="right number">{{unitPrice}}</td>
             <td class="right number">{{lineTotal}}</td>
           </tr>
+          {{#notes}}
+          <tr class="item-notes-row">
+            <td class="position"></td>
+            <td colspan="{{notesColspan}}">
+              <div class="item-note">{{notes}}</div>
+            </td>
+          </tr>
+          {{/notes}}
           {{/items}}
         </tbody>
       </table>

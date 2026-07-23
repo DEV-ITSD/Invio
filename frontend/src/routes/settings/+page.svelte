@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Save, CircleAlert, Building2, Palette, Sun, Languages, LayoutTemplate, CreditCard, Percent, Package, Hash, FileCodeCorner, Shield } from "lucide-svelte";
+  import { Save, CircleAlert, Building2, Palette, Sun, Languages, LayoutTemplate, LayoutDashboard, CreditCard, Percent, Package, Hash, FileCodeCorner, Shield } from "lucide-svelte";
   import { getContext } from "svelte";
   import { invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
@@ -21,6 +21,7 @@
     numberFormat: "comma",
     postalCityFormat: "auto",
     defaultTaxText: "",
+    dashboardRecentInvoicesLimit: 5,
     ...initialSettings,
     allowProtectedInvoiceChanges: asBool((initialSettings as Record<string, unknown>).allowProtectedInvoiceChanges),
   } as Record<string, any>);
@@ -212,6 +213,7 @@
     { id: "company", label: "Company", icon: Building2 },
     { id: "branding", label: "Branding", icon: Palette },
     { id: "appearance", label: "Appearance", icon: Sun },
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "localization", label: "Localization", icon: Languages },
     {
       id: "templates",
@@ -520,6 +522,21 @@
             <h2 class="text-xl font-semibold">{t("Appearance")}</h2>
             <p>{t("Adjust the look and feel of the application.")}</p>
             <ThemeToggle />
+          </div>
+        {:else if section === "dashboard"}
+          <div class="space-y-4">
+            <h2 class="text-xl font-semibold">{t("Dashboard Settings")}</h2>
+            <label class="form-control">
+              <div class="label">
+                <span class="label-text">{t("Number of recent invoices")}</span>
+              </div>
+              <input type="number" class="input input-bordered w-full" bind:value={settings.dashboardRecentInvoicesLimit} min="1" max="50" step="1" required disabled={!canUpdateSettings} />
+              <div class="label">
+                <span class="label-text-alt opacity-70">
+                  {t("Choose how many recent invoices are shown on the dashboard (1–50).")}
+                </span>
+              </div>
+            </label>
           </div>
         {:else if section === "localization"}
           <div class="space-y-4">
