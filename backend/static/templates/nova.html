@@ -204,6 +204,12 @@
           <span class="inv-k">{{labels.invoiceNumberShortLabel}}</span>
           <span class="inv-v">{{invoiceNumber}}</span>
         </div>
+        {{#quoteNumber}}
+        <div class="inv-kv-row">
+          <span class="inv-k">{{labels.quoteNumberShortLabel}}</span>
+          <span class="inv-v">{{quoteNumber}}</span>
+        </div>
+        {{/quoteNumber}}
         <div class="inv-kv-row">
           <span class="inv-k">{{labels.invoiceDateLabel}}</span>
           <span class="inv-v">{{issueDate}}</span>

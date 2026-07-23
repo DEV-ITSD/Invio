@@ -3,6 +3,8 @@
   "receiptTitle": "Recibo",
   "invoiceNumberLabel": "Número da Fatura",
   "invoiceNumberShortLabel": "Fatura nº",
+  "quoteNumberLabel": "Número do orçamento",
+  "quoteNumberShortLabel": "Orçamento nº",
   "invoiceDateLabel": "Data da Fatura",
   "dateLabel": "Data",
   "dueDateLabel": "Data de Vencimento",
