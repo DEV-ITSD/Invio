@@ -32,7 +32,7 @@
     templateVersionId: initInvoice?.templateVersionId || initSettings.templateVersionId || "",
     issueDate: initInvoice?.issueDate ? new Date(initInvoice.issueDate).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
     dueDate: initInvoice?.documentType === "receipt" ? "" : initInvoice?.dueDate ? new Date(initInvoice.dueDate).toISOString().slice(0, 10) : "",
-    taxMode: initInvoice?.taxMode || "invoice",
+    taxMode: initInvoice?.taxMode || "none",
     taxText: String(initInvoice?.taxText ?? "").trim() || defaultTaxText,
     taxRate: initInvoice?.taxRate || 0,
     discountText: String(initInvoice?.discountText ?? ""),
@@ -75,7 +75,13 @@
   let templates = $derived(data.templates || []);
   let selectedTemplate = $derived(templates.find((template: any) => template.id === form.templateId));
   let templateVersions = $derived(selectedTemplate?.versions || []);
-  let templateLocked = $derived(Boolean(initInvoice && initInvoice.status !== "draft"));
+  let templateLocked = $derived(
+    Boolean(
+      initInvoice &&
+        initInvoice.status !== "draft" &&
+        (initInvoice.status === "voided" || !data.allowProtectedInvoiceChanges),
+    ),
+  );
 
   $effect(() => {
     if (!form.templateId && templates.length) {
@@ -575,9 +581,9 @@
     <label class="form-control">
       <div class="label"><span class="label-text">{t("Tax Mode")}</span></div>
       <select class="select select-bordered w-full" value={form.taxMode} onchange={changeTaxMode}>
+        <option value="none">{t("No tax")}</option>
         <option value="invoice">{t("Invoice total")}</option>
         <option value="line">{t("Per line")}</option>
-        <option value="none">{t("No tax")}</option>
       </select>
     </label>
 

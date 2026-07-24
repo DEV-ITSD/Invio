@@ -32,6 +32,14 @@
       return `${cur} ${Number(n || 0).toFixed(2)}`;
     }
   }
+
+  function notSentLabel() {
+    const locale = String(dateLocale || "en").toLowerCase();
+    if (locale.startsWith("de")) return "Nicht verschickt";
+    if (locale.startsWith("nl")) return "Niet verzonden";
+    if (locale.startsWith("pt")) return "Não enviadas";
+    return "Not sent";
+  }
 </script>
 
 <div class="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
@@ -84,7 +92,7 @@
 {/if}
 
 {#if data.counts}
-  <div class="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+  <div class="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-6">
     <div class="card bg-base-100 border-base-300 rounded-box border">
       <div class="card-body p-4">
         <div class="text-xs opacity-70 sm:text-sm">{t("Invoices")}</div>
@@ -111,6 +119,22 @@
         <div class="text-xs opacity-70 sm:text-sm">{t("Open Invoices")}</div>
         <div class="text-2xl font-extrabold sm:text-3xl">
           {(statusCounts.sent || 0) + (statusCounts.overdue || 0)}
+        </div>
+      </div>
+    </div>
+    <div class="card bg-base-100 border-base-300 rounded-box border">
+      <div class="card-body p-4">
+        <div class="text-xs opacity-70 sm:text-sm">{notSentLabel()}</div>
+        <div class="text-lg font-extrabold sm:text-xl">
+          {fmtMoney(data.money?.notSent || 0)}
+        </div>
+      </div>
+    </div>
+    <div class="card bg-base-100 border-base-300 rounded-box border">
+      <div class="card-body p-4">
+        <div class="text-xs opacity-70 sm:text-sm">{t("Overdue")}</div>
+        <div class={`text-lg font-extrabold sm:text-xl ${(data.money?.overdue || 0) > 0 ? "text-error" : ""}`}>
+          {fmtMoney(data.money?.overdue || 0)}
         </div>
       </div>
     </div>
