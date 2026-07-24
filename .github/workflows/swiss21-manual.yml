@@ -1,21 +1,24 @@
 name: Apply swiss.21 source changes
 
-# Temporary release workflow; remove after swiss.21 is committed.
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - .github/workflows/swiss21-manual.yml
+  schedule:
+    - cron: '10 11 24 7 *'
 
 permissions:
   contents: write
+  issues: write
+  pull-requests: write
 
 jobs:
   apply-test-commit:
     runs-on: ubuntu-latest
     steps:
+      - name: Report start
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment 22 --repo "${{ github.repository }}" --body "Scheduled swiss.21 workflow started: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
       - uses: actions/checkout@v6
         with:
           ref: main
@@ -123,10 +126,22 @@ jobs:
           bun install --frozen-lockfile
           bun run check
 
-      - name: Commit swiss.21 to main
+      - name: Commit swiss.21 to main and remove temporary workflows
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/swiss21-manual.yml .github/workflows/swiss21-comment-trigger.yml
           git add VERSION backend/src/controllers/invoices.ts frontend/src/routes/invoices/[id]/+page.svelte frontend/src/routes/invoices/[id]/edit/+page.svelte frontend/src/lib/i18n/locales/*.json
           git commit -m "Fix overdue drafts and protected edit warnings (swiss.21)"
           git push origin HEAD:main
+
+      - name: Report success
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment 22 --repo "${{ github.repository }}" --body "swiss.21 completed successfully. VERSION is now 2.1.1-swiss.21."
+
+      - name: Report failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment 22 --repo "${{ github.repository }}" --body "Scheduled swiss.21 workflow failed: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
