@@ -1,5 +1,6 @@
 name: Verify swiss.21 container images
 
+# Trigger the temporary verification run.
 on:
   workflow_dispatch:
   push:
