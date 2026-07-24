@@ -1,5 +1,6 @@
 name: Apply swiss.21 source changes
 
+# Temporary release workflow; remove after swiss.21 is committed.
 on:
   workflow_dispatch:
   push:
