@@ -1,5 +1,6 @@
 name: Verify swiss.22 container images
 
+# Trigger the one-time swiss.22 verification after the release merge.
 on:
   push:
     branches:
