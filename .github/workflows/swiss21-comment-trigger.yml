@@ -1,0 +1,20 @@
+name: Trigger swiss.21 release
+
+on:
+  issue_comment:
+    types:
+      - created
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch:
+    if: github.event.issue.number == 22 && github.event.comment.body == '/run-swiss21'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch swiss.21 workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run swiss21-manual.yml --ref main --repo "${{ github.repository }}"
