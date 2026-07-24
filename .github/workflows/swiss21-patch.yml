@@ -3,7 +3,7 @@ name: Apply swiss.21 overdue status fix
 on:
   push:
     branches:
-      - agent/swiss-21-overdue-warnings
+      - main
 
 permissions:
   contents: write
