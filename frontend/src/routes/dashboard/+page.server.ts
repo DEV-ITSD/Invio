@@ -95,6 +95,12 @@ export const load: PageServerLoad = async ({ locals, cookies, url }) => {
     const outstanding = filteredInvoices
       .filter((i) => i.status === "sent" || i.status === "overdue")
       .reduce((s, i) => s + (i.total || 0), 0);
+    const notSent = filteredInvoices
+      .filter((i) => i.status === "draft")
+      .reduce((s, i) => s + (i.total || 0), 0);
+    const overdue = filteredInvoices
+      .filter((i) => i.status === "overdue")
+      .reduce((s, i) => s + (i.total || 0), 0);
     const status = {
       draft: filteredInvoices.filter((i) => i.status === "draft").length,
       sent: filteredInvoices.filter((i) => i.status === "sent").length,
@@ -112,8 +118,8 @@ export const load: PageServerLoad = async ({ locals, cookies, url }) => {
       .slice()
       .sort(
         (a, b) =>
-          new Date(b.updatedAt || b.issueDate || 0).getTime() -
-          new Date(a.updatedAt || a.issueDate || 0).getTime(),
+          new Date(b.issueDate || 0).getTime() -
+          new Date(a.issueDate || 0).getTime(),
       )
       .slice(0, recentInvoiceLimit);
 
@@ -130,7 +136,7 @@ export const load: PageServerLoad = async ({ locals, cookies, url }) => {
         customers: visibleCustomerCount,
         totalCustomers: customers.length,
       },
-      money: { billed, paid, outstanding, currency },
+      money: { billed, paid, outstanding, notSent, overdue, currency },
       status,
       recent,
       recentInvoiceLimit,
