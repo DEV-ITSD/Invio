@@ -135,7 +135,7 @@
                       </li>
                     {/if}
                     <li>
-                      <a href="/logout">
+                      <a href="/logout" data-sveltekit-reload>
                         <LogOut size={16} />
                         {t("Logout")}
                       </a>
@@ -200,7 +200,7 @@
                   </li>
                 {/if}
                 <li>
-                  <a href="/logout">
+                  <a href="/logout" data-sveltekit-reload>
                     <LogOut size={16} />
                     {t("Logout")}
                   </a>
