@@ -419,5 +419,7 @@
   "Created": "Criado",
   "Pos.": "Pos.",
   "Qty": "Qtd.",
-  "Total {{count}} customers": "Total de {{count}} clientes"
+  "Total {{count}} customers": "Total de {{count}} clientes",
+  "You are about to edit an issued invoice with status {{status}}. Ensure this is legally allowed in your jurisdiction. Continue?": "Você está prestes a editar uma fatura já emitida com o status “{{status}}”. Verifique se isso é permitido legalmente em sua jurisdição. Continuar?",
+  "Warning: you are editing an issued invoice with status {{status}}. Ensure this is legally allowed in your jurisdiction.": "Aviso: você está editando uma fatura já emitida com o status “{{status}}”. Verifique se isso é permitido legalmente em sua jurisdição."
 }

@@ -419,5 +419,7 @@
   "Created": "Erstellt",
   "Pos.": "Pos.",
   "Qty": "Menge",
-  "Total {{count}} customers": "Total {{count}} Kunden"
+  "Total {{count}} customers": "Total {{count}} Kunden",
+  "You are about to edit an issued invoice with status {{status}}. Ensure this is legally allowed in your jurisdiction. Continue?": "Sie sind dabei, eine bereits ausgestellte Rechnung mit dem Status „{{status}}“ zu bearbeiten. Stellen Sie sicher, dass dies in Ihrer Rechtsordnung zulässig ist. Fortfahren?",
+  "Warning: you are editing an issued invoice with status {{status}}. Ensure this is legally allowed in your jurisdiction.": "Warnung: Sie bearbeiten eine bereits ausgestellte Rechnung mit dem Status „{{status}}“. Stellen Sie sicher, dass dies in Ihrer Rechtsordnung zulässig ist."
 }

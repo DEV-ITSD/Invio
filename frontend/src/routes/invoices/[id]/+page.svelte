@@ -31,7 +31,7 @@
   import { formatPostalCityLine } from "$lib/address";
 
   let { data, form } = $props();
-  let t = getContext("i18n") as (key: string) => string;
+  let t = getContext("i18n") as (key: string, params?: Record<string, string | number>) => string;
   const getLoc = getContext("localization") as () => any;
 
   let invoice = $derived(data.invoice);
@@ -132,7 +132,11 @@
 
   function confirmEditNavigation(event: MouseEvent) {
     if (!allowProtectedInvoiceChanges || !isRetentionProtectedInvoice) return;
-    if (!confirm(t("You are about to edit a sent/paid invoice. Ensure this is legally allowed in your jurisdiction. Continue?"))) {
+    const message = t(
+      "You are about to edit an issued invoice with status {{status}}. Ensure this is legally allowed in your jurisdiction. Continue?",
+      { status: statusLabel(invoice?.status) },
+    );
+    if (!confirm(message)) {
       event.preventDefault();
     }
   }

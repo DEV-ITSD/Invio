@@ -419,5 +419,7 @@
   "Created": "Aangemaakt",
   "Pos.": "Pos.",
   "Qty": "Aantal",
-  "Total {{count}} customers": "Totaal {{count}} klanten"
+  "Total {{count}} customers": "Totaal {{count}} klanten",
+  "You are about to edit an issued invoice with status {{status}}. Ensure this is legally allowed in your jurisdiction. Continue?": "U staat op het punt een reeds uitgegeven factuur met de status ‘{{status}}’ te bewerken. Controleer of dit wettelijk is toegestaan in uw rechtsgebied. Doorgaan?",
+  "Warning: you are editing an issued invoice with status {{status}}. Ensure this is legally allowed in your jurisdiction.": "Waarschuwing: u bewerkt een reeds uitgegeven factuur met de status ‘{{status}}’. Controleer of dit wettelijk is toegestaan in uw rechtsgebied."
 }

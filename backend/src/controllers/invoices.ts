@@ -1536,11 +1536,9 @@ function applyDerivedOverdue<
   T extends { status: Invoice["status"]; dueDate?: Date },
 >(inv: T): T {
   if (!inv) return inv;
-  if (
-    inv.status === "paid" ||
-    inv.status === "voided" ||
-    inv.status === "complete"
-  ) {
+  // Only issued invoices can become overdue. A draft with a past due date
+  // remains a draft until it is sent.
+  if (inv.status !== "sent") {
     return inv;
   }
   if (!inv.dueDate) return inv;

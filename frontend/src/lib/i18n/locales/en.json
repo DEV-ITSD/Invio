@@ -359,5 +359,7 @@
   "Financial details": "Financial details",
   "Created": "Created",
   "Pos.": "Pos.",
-  "Total {{count}} customers": "Total {{count}} customers"
+  "Total {{count}} customers": "Total {{count}} customers",
+  "You are about to edit an issued invoice with status {{status}}. Ensure this is legally allowed in your jurisdiction. Continue?": "You are about to edit an issued invoice with status {{status}}. Ensure this is legally allowed in your jurisdiction. Continue?",
+  "Warning: you are editing an issued invoice with status {{status}}. Ensure this is legally allowed in your jurisdiction.": "Warning: you are editing an issued invoice with status {{status}}. Ensure this is legally allowed in your jurisdiction."
 }
