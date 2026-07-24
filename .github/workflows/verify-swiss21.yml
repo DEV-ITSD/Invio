@@ -1,0 +1,60 @@
+name: Verify swiss.21 container images
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/verify-swiss21.yml
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  verify-images:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for backend and frontend images
+        shell: bash
+        run: |
+          set -euo pipefail
+          backend="ghcr.io/dev-itsd/invio-backend:v2.1.1-swiss.21"
+          frontend="ghcr.io/dev-itsd/invio-frontend:v2.1.1-swiss.21"
+
+          for attempt in $(seq 1 30); do
+            backend_ok=false
+            frontend_ok=false
+
+            if docker manifest inspect "$backend" >/dev/null 2>&1; then
+              backend_ok=true
+            fi
+            if docker manifest inspect "$frontend" >/dev/null 2>&1; then
+              frontend_ok=true
+            fi
+
+            echo "Attempt ${attempt}: backend=${backend_ok}, frontend=${frontend_ok}"
+            if [[ "$backend_ok" == "true" && "$frontend_ok" == "true" ]]; then
+              exit 0
+            fi
+            sleep 10
+          done
+
+          echo "swiss.21 images were not both available in time" >&2
+          exit 1
+
+      - name: Report successful verification
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr comment 25 --repo "${{ github.repository }}" --body "✅ swiss.21 verified: both GHCR images are available:\n- ghcr.io/dev-itsd/invio-backend:v2.1.1-swiss.21\n- ghcr.io/dev-itsd/invio-frontend:v2.1.1-swiss.21"
+
+      - name: Report failed verification
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr comment 25 --repo "${{ github.repository }}" --body "❌ swiss.21 verification failed: one or both GHCR images were not available after repeated checks."
