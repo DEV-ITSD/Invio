@@ -1,0 +1,43 @@
+name: Verify swiss.24 release
+
+on:
+  issue_comment:
+    types:
+      - created
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  verify:
+    if: github.event.issue.pull_request && github.event.comment.body == 'verify-swiss24'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Wait for swiss.24 release artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -u
+          backend="ghcr.io/dev-itsd/invio-backend:v2.1.1-swiss.24"
+          frontend="ghcr.io/dev-itsd/invio-frontend:v2.1.1-swiss.24"
+          tag="refs/tags/v2.1.1-swiss.24"
+          for attempt in $(seq 1 60); do
+            tag_ok=0
+            backend_ok=0
+            frontend_ok=0
+            git ls-remote --exit-code --tags origin "$tag" >/dev/null 2>&1 && tag_ok=1
+            docker manifest inspect "$backend" >/dev/null 2>&1 && backend_ok=1
+            docker manifest inspect "$frontend" >/dev/null 2>&1 && frontend_ok=1
+            if [ "$tag_ok" -eq 1 ] && [ "$backend_ok" -eq 1 ] && [ "$frontend_ok" -eq 1 ]; then
+              gh pr comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --body "✅ swiss.24 verified:\n- Git tag: v2.1.1-swiss.24\n- $backend\n- $frontend"
+              exit 0
+            fi
+            sleep 10
+          done
+          gh pr comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --body "❌ swiss.24 verification timed out: tag or one of the GHCR images is still missing."
+          exit 1
