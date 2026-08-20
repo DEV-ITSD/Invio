@@ -1,0 +1,208 @@
+from pathlib import Path
+import re
+
+
+def read(path: str) -> str:
+    return Path(path).read_text(encoding="utf-8")
+
+
+def write(path: str, text: str) -> None:
+    Path(path).write_text(text, encoding="utf-8")
+
+
+def replace_once(text: str, old: str, new: str, label: str) -> str:
+    count = text.count(old)
+    if count != 1:
+        raise SystemExit(f"{label}: expected 1 match, found {count}")
+    return text.replace(old, new, 1)
+
+
+for path in ["VERSION", "frontend/static/VERSION"]:
+    write(path, "2.1.1-swiss.24\n")
+
+path = "backend/src/types/index.ts"
+text = read(path)
+text = replace_once(
+    text,
+    "  invoiceNumber: string;\n  quoteNumber?: string;\n  customerId: string;",
+    "  invoiceNumber: string;\n  quoteNumber?: string;\n  title?: string;\n  customerId: string;",
+    "Invoice.title type",
+)
+text = replace_once(
+    text,
+    "  invoiceNumber?: string;\n  quoteNumber?: string;\n  issueDate?: string | Date;",
+    "  invoiceNumber?: string;\n  quoteNumber?: string;\n  title?: string;\n  issueDate?: string | Date;",
+    "CreateInvoiceRequest.title type",
+)
+write(path, text)
+
+path = "backend/src/database/init.ts"
+text = read(path)
+quote_block = '''  addColumnIfMissing(\n    database,\n    "invoices",\n    "quote_number",\n    "TEXT NOT NULL DEFAULT ''",\n  );\n'''
+title_block = '''  addColumnIfMissing(\n    database,\n    "invoices",\n    "title",\n    "TEXT NOT NULL DEFAULT ''",\n  );\n'''
+text = replace_once(text, quote_block, quote_block + title_block, "ensure invoices.title")
+text = replace_once(
+    text,
+    "        quote_number TEXT NOT NULL DEFAULT '',\n        decimal_display TEXT NOT NULL DEFAULT 'automatic',",
+    "        quote_number TEXT NOT NULL DEFAULT '',\n        title TEXT NOT NULL DEFAULT '',\n        decimal_display TEXT NOT NULL DEFAULT 'automatic',",
+    "voided migration title",
+)
+write(path, text)
+
+path = "backend/src/database/migrations.sql"
+text = read(path)
+text = replace_once(
+    text,
+    "  quote_number TEXT NOT NULL DEFAULT '',\n  decimal_display TEXT NOT NULL DEFAULT 'automatic',",
+    "  quote_number TEXT NOT NULL DEFAULT '',\n  title TEXT NOT NULL DEFAULT '',\n  decimal_display TEXT NOT NULL DEFAULT 'automatic',",
+    "migrations create title",
+)
+text = replace_once(
+    text,
+    "ALTER TABLE invoices ADD COLUMN decimal_display TEXT NOT NULL DEFAULT 'automatic';",
+    "ALTER TABLE invoices ADD COLUMN decimal_display TEXT NOT NULL DEFAULT 'automatic';\nALTER TABLE invoices ADD COLUMN title TEXT NOT NULL DEFAULT '';",
+    "migrations alter title",
+)
+write(path, text)
+
+path = "backend/src/database/migrations_clean.sql"
+text = read(path)
+text = replace_once(
+    text,
+    "  quote_number TEXT NOT NULL DEFAULT '',\n  customer_id TEXT REFERENCES customers(id),",
+    "  quote_number TEXT NOT NULL DEFAULT '',\n  title TEXT NOT NULL DEFAULT '',\n  customer_id TEXT REFERENCES customers(id),",
+    "clean schema title",
+)
+write(path, text)
+
+path = "backend/src/controllers/invoices.ts"
+text = read(path)
+text = replace_once(
+    text,
+    '    invoiceNumber: invoiceNumber!,\n    quoteNumber: String(data.quoteNumber || "").trim() || undefined,\n    customerId: data.customerId,',
+    '    invoiceNumber: invoiceNumber!,\n    quoteNumber: String(data.quoteNumber || "").trim() || undefined,\n    title: String(data.title || "").trim() || undefined,\n    customerId: data.customerId,',
+    "create invoice title",
+)
+column_count = text.count("quote_number, decimal_display")
+if column_count != 5:
+    raise SystemExit(f"invoice SQL columns: expected 5 matches, found {column_count}")
+text = text.replace("quote_number, decimal_display", "quote_number, decimal_display, title")
+pattern = re.compile(r"(quote_number, decimal_display, title\n\s*\) VALUES \()([^\n]+)(\))")
+
+
+def add_placeholder(match: re.Match[str]) -> str:
+    values = match.group(2)
+    count = values.count("?")
+    if count != 29:
+        raise SystemExit(f"invoice INSERT: expected 29 placeholders, found {count}")
+    return match.group(1) + values + ", ?" + match.group(3)
+
+
+text, insert_count = pattern.subn(add_placeholder, text)
+if insert_count != 2:
+    raise SystemExit(f"invoice INSERTs: expected 2 matches, found {insert_count}")
+text = replace_once(
+    text,
+    '      invoice.quoteNumber || "",\n      invoice.decimalDisplay,',
+    '      invoice.quoteNumber || "",\n      invoice.decimalDisplay,\n      invoice.title || "",',
+    "create insert title value",
+)
+text = replace_once(
+    text,
+    '      "quoteNumber",\n      "decimalDisplay",',
+    '      "quoteNumber",\n      "title",\n      "decimalDisplay",',
+    "protected title",
+)
+text = replace_once(
+    text,
+    "      quote_number = ?,\n      decimal_display = ?\n    WHERE id = ?",
+    "      quote_number = ?,\n      decimal_display = ?,\n      title = ?\n    WHERE id = ?",
+    "update SQL title",
+)
+text = replace_once(
+    text,
+    "        data.decimalDisplay === undefined\n          ? existing.decimalDisplay\n          : normalizeInvoiceDecimalDisplay(data.decimalDisplay),\n        id,",
+    "        data.decimalDisplay === undefined\n          ? existing.decimalDisplay\n          : normalizeInvoiceDecimalDisplay(data.decimalDisplay),\n        data.title === undefined\n          ? existing.title || \"\"\n          : String(data.title ?? \"\").trim(),\n        id,",
+    "update title value",
+)
+text = replace_once(
+    text,
+    '        original.quoteNumber || "",\n        normalizeInvoiceDecimalDisplay(original.decimalDisplay),',
+    '        original.quoteNumber || "",\n        normalizeInvoiceDecimalDisplay(original.decimalDisplay),\n        original.title || "",',
+    "duplicate title value",
+)
+text = replace_once(
+    text,
+    "    quoteNumber: row[27] ? String(row[27]) : undefined,\n    decimalDisplay: normalizeInvoiceDecimalDisplay(row[28]),",
+    "    quoteNumber: row[27] ? String(row[27]) : undefined,\n    decimalDisplay: normalizeInvoiceDecimalDisplay(row[28]),\n    title: row[29] ? String(row[29]) : undefined,",
+    "map title",
+)
+write(path, text)
+
+path = "backend/src/utils/pdfFilename.ts"
+text = read(path)
+text = replace_once(
+    text,
+    "  const datePart = formatCompactDate(invoice.issueDate);\n  return `${customerPrefix}_${typePart}_${numberPart}_${datePart}.pdf`;",
+    '  const titlePart = sanitizeFilenamePart(invoice.title, "");\n  const datePart = formatCompactDate(invoice.issueDate);\n  return [customerPrefix, typePart, numberPart, titlePart, datePart]\n    .filter(Boolean)\n    .join("_") + ".pdf";',
+    "PDF filename title",
+)
+write(path, text)
+
+path = "backend/src/utils/pdfFilename_test.ts"
+text = read(path)
+if "Worklink_Rechnung_R-WOR-2026-007_Titel_20260630.pdf" in text:
+    raise SystemExit("PDF title test already exists")
+test = r'''
+
+Deno.test("includes the invoice title before the PDF date", () => {
+  const titledInvoice = {
+    ...invoice,
+    invoiceNumber: "R-WOR-2026-007",
+    issueDate: new Date("2026-06-30T00:00:00.000Z"),
+    documentType: "invoice",
+    title: "Titel",
+    customer: { ...invoice.customer, pdfName: "Worklink" },
+  } as InvoiceWithDetails;
+  assertEquals(
+    buildInvoicePdfFilename(titledInvoice, {
+      companyName: "Worklink",
+      currency: "CHF",
+      locale: "de",
+    }),
+    "Worklink_Rechnung_R-WOR-2026-007_Titel_20260630.pdf",
+  );
+});
+'''
+write(path, text.rstrip() + test + "\n")
+
+path = "frontend/src/lib/components/InvoiceEditor.svelte"
+text = read(path)
+text = replace_once(
+    text,
+    '    quoteNumber: initInvoice?.quoteNumber ?? "",\n    currency:',
+    '    quoteNumber: initInvoice?.quoteNumber ?? "",\n    title: initInvoice?.title ?? "",\n    currency:',
+    "editor form title",
+)
+decimal_block = '''    <label class="form-control">\n      <div class="label">\n        <span class="label-text">{t("Decimal places")}</span>\n      </div>\n      <select class="select select-bordered w-full" bind:value={form.decimalDisplay}>\n        <option value="automatic">{t("Automatic")}</option>\n        <option value="always">{t("Always show")}</option>\n      </select>\n    </label>\n'''
+title_field = '''\n    <label class="form-control">\n      <div class="label">\n        <span class="label-text">{t("Title")}</span>\n      </div>\n      <input type="text" class="input input-bordered w-full" maxlength="100" bind:value={form.title} />\n    </label>\n'''
+text = replace_once(text, decimal_block, decimal_block + title_field, "editor title field")
+write(path, text)
+
+translations = {
+    "frontend/src/lib/i18n/locales/en.json": "Title",
+    "frontend/src/lib/i18n/locales/de.json": "Titel",
+    "frontend/src/lib/i18n/locales/nl.json": "Titel",
+    "frontend/src/lib/i18n/locales/pt-br.json": "Título",
+}
+for path, value in translations.items():
+    text = read(path)
+    if '"Title"' in text:
+        raise SystemExit(f"{path}: Title already exists")
+    stripped = text.rstrip()
+    if not stripped.endswith("}"):
+        raise SystemExit(f"{path}: invalid JSON ending")
+    body = stripped[:-1].rstrip()
+    if not body.endswith(","):
+        body += ","
+    write(path, body + f'\n  "Title": "{value}"\n}}\n')
