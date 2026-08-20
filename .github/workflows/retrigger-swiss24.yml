@@ -1,5 +1,6 @@
 name: Retrigger swiss.24 preparation
 
+# Execute once for swiss.24.
 on:
   push:
     branches:
