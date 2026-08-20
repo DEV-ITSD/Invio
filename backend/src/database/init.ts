@@ -211,6 +211,12 @@ function ensureInvoiceColumns(database: DB): void {
   addColumnIfMissing(
     database,
     "invoices",
+    "title",
+    "TEXT NOT NULL DEFAULT ''",
+  );
+  addColumnIfMissing(
+    database,
+    "invoices",
     "decimal_display",
     "TEXT NOT NULL DEFAULT 'automatic'",
   );
@@ -537,6 +543,7 @@ function migrateInvoicesForVoided(database: DB): void {
         id TEXT PRIMARY KEY,
         invoice_number TEXT UNIQUE NOT NULL,
         quote_number TEXT NOT NULL DEFAULT '',
+        title TEXT NOT NULL DEFAULT '',
         decimal_display TEXT NOT NULL DEFAULT 'automatic',
         customer_id TEXT REFERENCES customers(id),
         issue_date DATE NOT NULL,

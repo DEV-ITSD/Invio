@@ -43,6 +43,7 @@ export interface Invoice {
   id: string;
   invoiceNumber: string;
   quoteNumber?: string;
+  title?: string;
   customerId: string;
   issueDate: Date;
   dueDate?: Date;
@@ -280,6 +281,7 @@ export interface CreateInvoiceRequest {
   customerId: string;
   invoiceNumber?: string;
   quoteNumber?: string;
+  title?: string;
   issueDate?: string | Date;
   dueDate?: string | Date;
   currency?: string;

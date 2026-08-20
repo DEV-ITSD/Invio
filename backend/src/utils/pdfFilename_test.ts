@@ -45,3 +45,22 @@ Deno.test(
     }
   },
 );
+
+Deno.test("includes the invoice title before the PDF date", () => {
+  const titledInvoice = {
+    ...invoice,
+    invoiceNumber: "R-WOR-2026-007",
+    issueDate: new Date("2026-06-30T00:00:00.000Z"),
+    documentType: "invoice",
+    title: "Titel",
+    customer: { ...invoice.customer, pdfName: "Worklink" },
+  } as InvoiceWithDetails;
+  assertEquals(
+    buildInvoicePdfFilename(titledInvoice, {
+      companyName: "Worklink",
+      currency: "CHF",
+      locale: "de",
+    }),
+    "Worklink_Rechnung_R-WOR-2026-007_Titel_20260630.pdf",
+  );
+});

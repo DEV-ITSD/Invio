@@ -42,8 +42,11 @@ export function buildInvoicePdfFilename(
     invoice.invoiceNumber || invoice.id,
     "unknown",
   );
+  const titlePart = sanitizeFilenamePart(invoice.title, "");
   const datePart = formatCompactDate(invoice.issueDate);
-  return `${customerPrefix}_${typePart}_${numberPart}_${datePart}.pdf`;
+  return [customerPrefix, typePart, numberPart, titlePart, datePart]
+    .filter(Boolean)
+    .join("_") + ".pdf";
 }
 
 export function attachmentContentDisposition(filename: string): string {

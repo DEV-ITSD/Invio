@@ -354,6 +354,7 @@ export const createInvoice = (
     id: invoiceId,
     invoiceNumber: invoiceNumber!,
     quoteNumber: String(data.quoteNumber || "").trim() || undefined,
+    title: String(data.title || "").trim() || undefined,
     customerId: data.customerId,
     issueDate,
     dueDate,
@@ -397,8 +398,8 @@ export const createInvoice = (
       payment_terms, notes, share_token, created_at, updated_at,
       prices_include_tax, rounding_mode, template_id, template_version_id,
       template_html_snapshot, document_type, tax_mode, tax_text, discount_text,
-      quote_number, decimal_display
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      quote_number, decimal_display, title
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       invoice.id,
       invoice.invoiceNumber,
@@ -429,6 +430,7 @@ export const createInvoice = (
       invoice.discountText || "",
       invoice.quoteNumber || "",
       invoice.decimalDisplay,
+      invoice.title || "",
     ],
   );
   recordStatusChange(db, invoiceId, invoice.status || "draft");
@@ -578,7 +580,7 @@ export const getInvoices = (): Invoice[] => {
            payment_terms, notes, share_token, created_at, updated_at,
            prices_include_tax, rounding_mode, template_id, template_version_id,
            template_html_snapshot, document_type, tax_mode, tax_text, discount_text,
-           quote_number, decimal_display
+           quote_number, decimal_display, title
     FROM invoices
     ORDER BY created_at DESC
   `);
@@ -595,7 +597,7 @@ export const getInvoiceById = (id: string): InvoiceWithDetails | null => {
            payment_terms, notes, share_token, created_at, updated_at,
            prices_include_tax, rounding_mode, template_id, template_version_id,
            template_html_snapshot, document_type, tax_mode, tax_text, discount_text,
-           quote_number, decimal_display
+           quote_number, decimal_display, title
     FROM invoices
     WHERE id = ?
   `,
@@ -702,7 +704,7 @@ export const getInvoiceByShareToken = (
            payment_terms, notes, share_token, created_at, updated_at,
            prices_include_tax, rounding_mode, template_id, template_version_id,
            template_html_snapshot, document_type, tax_mode, tax_text, discount_text,
-           quote_number, decimal_display
+           quote_number, decimal_display, title
     FROM invoices
     WHERE share_token = ?
   `,
@@ -851,6 +853,7 @@ export const updateInvoice = async (
       "issueDate",
       "invoiceNumber",
       "quoteNumber",
+      "title",
       "decimalDisplay",
       "templateId",
       "templateVersionId",
@@ -994,7 +997,8 @@ export const updateInvoice = async (
       tax_text = ?,
       discount_text = ?,
       quote_number = ?,
-      decimal_display = ?
+      decimal_display = ?,
+      title = ?
     WHERE id = ?
   `,
       [
@@ -1030,6 +1034,9 @@ export const updateInvoice = async (
         data.decimalDisplay === undefined
           ? existing.decimalDisplay
           : normalizeInvoiceDecimalDisplay(data.decimalDisplay),
+        data.title === undefined
+          ? existing.title || ""
+          : String(data.title ?? "").trim(),
         id,
       ],
     );
@@ -1271,8 +1278,8 @@ export const duplicateInvoice = async (
       payment_terms, notes, share_token, created_at, updated_at,
       prices_include_tax, rounding_mode, template_id, template_version_id,
       template_html_snapshot, document_type, tax_mode, tax_text, discount_text,
-      quote_number, decimal_display
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      quote_number, decimal_display, title
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
       [
         newId,
@@ -1306,6 +1313,7 @@ export const duplicateInvoice = async (
         original.discountText || "",
         original.quoteNumber || "",
         normalizeInvoiceDecimalDisplay(original.decimalDisplay),
+        original.title || "",
       ],
     );
     // Copy items
@@ -1529,6 +1537,7 @@ function mapRowToInvoice(row: unknown[]): Invoice {
     discountText: row[26] ? String(row[26]) : undefined,
     quoteNumber: row[27] ? String(row[27]) : undefined,
     decimalDisplay: normalizeInvoiceDecimalDisplay(row[28]),
+    title: row[29] ? String(row[29]) : undefined,
   };
 }
 
