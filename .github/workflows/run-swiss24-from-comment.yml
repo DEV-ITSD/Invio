@@ -1,0 +1,54 @@
+name: Run swiss.24 from PR comment
+
+on:
+  issue_comment:
+    types:
+      - created
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  prepare:
+    if: github.event.issue.pull_request && github.event.comment.body == 'run-swiss24'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Apply patch
+        run: |
+          set -euo pipefail
+          git checkout -B agent/swiss-24-invoice-title
+          python scripts/prepare_swiss24.py
+      - name: Validate
+        run: |
+          set -euo pipefail
+          python -m json.tool frontend/src/lib/i18n/locales/en.json >/dev/null
+          python -m json.tool frontend/src/lib/i18n/locales/de.json >/dev/null
+          python -m json.tool frontend/src/lib/i18n/locales/nl.json >/dev/null
+          python -m json.tool frontend/src/lib/i18n/locales/pt-br.json >/dev/null
+          deno test backend/src/utils/pdfFilename_test.ts
+          git diff --check
+      - name: Commit branch
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add VERSION frontend/static/VERSION backend/src/types/index.ts backend/src/database/init.ts backend/src/database/migrations.sql backend/src/database/migrations_clean.sql backend/src/controllers/invoices.ts backend/src/utils/pdfFilename.ts backend/src/utils/pdfFilename_test.ts frontend/src/lib/components/InvoiceEditor.svelte frontend/src/lib/i18n/locales/en.json frontend/src/lib/i18n/locales/de.json frontend/src/lib/i18n/locales/nl.json frontend/src/lib/i18n/locales/pt-br.json
+          git commit -m "Add invoice title to PDF filenames (swiss.24)"
+          git push --force origin HEAD:agent/swiss-24-invoice-title
+      - name: Report success
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --body "✅ swiss.24 preparation succeeded · run ${{ github.run_id }}"
+      - name: Report failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --body "❌ swiss.24 preparation failed · run ${{ github.run_id }}"
