@@ -33,6 +33,11 @@ jobs:
           python -m json.tool frontend/src/lib/i18n/locales/nl.json >/dev/null
           python -m json.tool frontend/src/lib/i18n/locales/pt-br.json >/dev/null
           deno test backend/src/utils/pdfFilename_test.ts
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('backend/src/utils/pdfFilename_test.ts')
+          path.write_text(path.read_text(encoding='utf-8').rstrip() + '\n', encoding='utf-8')
+          PY
           git diff --check
       - name: Commit branch
         run: |
