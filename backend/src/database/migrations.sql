@@ -63,6 +63,7 @@ CREATE TABLE invoices (
   id TEXT PRIMARY KEY,
   invoice_number TEXT UNIQUE NOT NULL,
   quote_number TEXT NOT NULL DEFAULT '',
+  title TEXT NOT NULL DEFAULT '',
   decimal_display TEXT NOT NULL DEFAULT 'automatic',
   customer_id TEXT REFERENCES customers(id),
   issue_date DATE NOT NULL,
@@ -201,6 +202,7 @@ CREATE TABLE IF NOT EXISTS invoice_taxes (
 ALTER TABLE invoices ADD COLUMN prices_include_tax BOOLEAN DEFAULT 0;
 ALTER TABLE invoices ADD COLUMN rounding_mode TEXT DEFAULT 'line';
 ALTER TABLE invoices ADD COLUMN decimal_display TEXT NOT NULL DEFAULT 'automatic';
+ALTER TABLE invoices ADD COLUMN title TEXT NOT NULL DEFAULT '';
 ALTER TABLE customers ADD COLUMN support_email TEXT;
 
 -- Products table for reusable invoice items

@@ -24,6 +24,7 @@
     customerId: initInvoice?.customerId || "",
     invoiceNumber: initInvoice?.invoiceNumber ?? initNextInvoiceNumber,
     quoteNumber: initInvoice?.quoteNumber ?? "",
+    title: initInvoice?.title ?? "",
     currency: initInvoice?.currency || initSettings.currency || "EUR",
     status: initInvoice?.status || "draft",
     documentType: initInvoice?.documentType || "invoice",
@@ -401,6 +402,13 @@
         <option value="automatic">{t("Automatic")}</option>
         <option value="always">{t("Always show")}</option>
       </select>
+    </label>
+
+    <label class="form-control">
+      <div class="label">
+        <span class="label-text">{t("Title")}</span>
+      </div>
+      <input type="text" class="input input-bordered w-full" maxlength="100" bind:value={form.title} />
     </label>
   </div>
 
