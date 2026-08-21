@@ -238,6 +238,7 @@
       <thead>
         <tr class="bg-base-200">
           <th>{t("Invoice No")}</th>
+          <th>{t("Title")}</th>
           <th>{t("Customer")}</th>
           <th>{t("Total")}</th>
           <th class="hidden sm:table-cell">{t("Status")}</th>
@@ -253,6 +254,7 @@
                 {t(inv.status?.charAt(0).toUpperCase() + (inv.status || "").slice(1))}
               </div>
             </td>
+            <td class="max-w-[16rem] truncate" title={inv.title || ""}>{inv.title || "-"}</td>
             <td>{inv.customer?.name || ""}</td>
             <td>{fmtMoney(inv.total || 0)}</td>
             <td class="hidden sm:table-cell">

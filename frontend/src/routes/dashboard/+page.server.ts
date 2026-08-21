@@ -6,6 +6,7 @@ import { getVersion } from "$lib/version";
 type Invoice = {
   id: string;
   invoiceNumber: string;
+  title?: string;
   customerId?: string;
   customer?: { name?: string };
   issueDate?: string | Date;

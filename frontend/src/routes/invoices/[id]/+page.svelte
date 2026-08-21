@@ -483,6 +483,8 @@
           <dd class="text-right font-medium break-all">{invoice.invoiceNumber || "-"}</dd>
           <dt class="opacity-60">{t("Quote Number")}</dt>
           <dd class="text-right font-medium break-all">{invoice.quoteNumber || "-"}</dd>
+          <dt class="opacity-60">{t("Title")}</dt>
+          <dd class="text-right font-medium break-all">{invoice.title || "-"}</dd>
           <dt class="opacity-60">{t("Status")}</dt>
           <dd class="text-right font-medium">{statusLabel(invoice.status)}</dd>
           <dt class="opacity-60">{t("Issue Date")}</dt>

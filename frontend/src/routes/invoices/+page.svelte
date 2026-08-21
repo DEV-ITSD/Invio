@@ -30,7 +30,7 @@
   let filterCustomer = $state("all");
   let filterStatus = $state("all");
   let filterYear = $state(currentYear);
-  let sortKey = $state<"invoiceNumber" | "documentType" | "customer" | "total" | "status" | "issueDate" | "updatedAt">("invoiceNumber");
+  let sortKey = $state<"invoiceNumber" | "title" | "documentType" | "customer" | "total" | "status" | "issueDate" | "updatedAt">("invoiceNumber");
   let sortDirection = $state<"asc" | "desc">("desc");
 
   function toDateMs(v: unknown) {
@@ -66,7 +66,7 @@
 
   let yearOptions = $derived([...new Set([currentYear, ...invoices.map((invoice) => invoiceYear(invoice.issueDate || invoice.issue_date)).filter(Boolean)])].sort((a, b) => Number(b) - Number(a)));
 
-  function handleSort(key: "invoiceNumber" | "documentType" | "customer" | "total" | "status" | "issueDate" | "updatedAt") {
+  function handleSort(key: "invoiceNumber" | "title" | "documentType" | "customer" | "total" | "status" | "issueDate" | "updatedAt") {
     if (sortKey === key) {
       sortDirection = sortDirection === "asc" ? "desc" : "asc";
       return;
@@ -75,7 +75,7 @@
     sortDirection = key === "invoiceNumber" ? "desc" : "asc";
   }
 
-  function sortMarker(key: "invoiceNumber" | "documentType" | "customer" | "total" | "status" | "issueDate" | "updatedAt") {
+  function sortMarker(key: "invoiceNumber" | "title" | "documentType" | "customer" | "total" | "status" | "issueDate" | "updatedAt") {
     if (sortKey !== key) return "";
     return sortDirection === "asc" ? " ▲" : " ▼";
   }
@@ -95,6 +95,8 @@
       let result = 0;
       if (sortKey === "invoiceNumber") {
         result = compareText(a.invoiceNumber, b.invoiceNumber);
+      } else if (sortKey === "title") {
+        result = compareText(a.title, b.title);
       } else if (sortKey === "documentType") {
         result = compareText(a.documentType, b.documentType);
       } else if (sortKey === "customer") {
@@ -217,6 +219,11 @@
             </button>
           </th>
           <th>
+            <button type="button" class="btn btn-ghost btn-xs px-1 normal-case" onclick={() => handleSort("title")}>
+              {t("Title")}{sortMarker("title")}
+            </button>
+          </th>
+          <th>
             <button type="button" class="btn btn-ghost btn-xs px-1 normal-case" onclick={() => handleSort("documentType")}>
               {t("Document Type")}{sortMarker("documentType")}
             </button>
@@ -265,6 +272,9 @@
                   {new Date(inv.issueDate).toLocaleDateString(dateLocale, { year: "numeric", month: "short", day: "numeric" })}
                 {/if}
               </div>
+            </td>
+            <td class="max-w-[16rem] truncate" title={inv.title || ""}>
+              {inv.title || "-"}
             </td>
             <td>
               <div class="badge badge-outline badge-sm">
