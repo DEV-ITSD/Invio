@@ -40,7 +40,7 @@ jobs:
       - name: Check frontend
         working-directory: frontend
         run: |
-          npm ci
+          npm install --package-lock=false
           npm run check
 
       - name: Commit swiss.25 branch
