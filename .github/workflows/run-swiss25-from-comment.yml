@@ -22,17 +22,26 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git checkout -B agent/swiss-25-document-details-title
+          git checkout -B agent/swiss-25-title-visibility
           python scripts/prepare_swiss25.py
 
-      - name: Validate patch
+      - name: Validate source patch
         shell: bash
         run: |
           set -euo pipefail
           grep -F 'invoice.title || "-"' 'frontend/src/routes/invoices/[id]/+page.svelte'
+          grep -F 'handleSort("title")' 'frontend/src/routes/invoices/+page.svelte'
+          grep -F '<th>{t("Title")}</th>' 'frontend/src/routes/dashboard/+page.svelte'
+          grep -F 'title?: string;' 'frontend/src/routes/dashboard/+page.server.ts'
           grep -Fx '2.1.1-swiss.25' VERSION
           grep -Fx '2.1.1-swiss.25' frontend/static/VERSION
           git diff --check
+
+      - name: Check frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run check
 
       - name: Commit swiss.25 branch
         shell: bash
@@ -40,9 +49,13 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add VERSION frontend/static/VERSION 'frontend/src/routes/invoices/[id]/+page.svelte'
-          git commit -m "Show invoice title in document details (swiss.25)"
-          git push --force origin HEAD:agent/swiss-25-document-details-title
+          git add VERSION frontend/static/VERSION \
+            'frontend/src/routes/invoices/[id]/+page.svelte' \
+            'frontend/src/routes/invoices/+page.svelte' \
+            'frontend/src/routes/dashboard/+page.svelte' \
+            'frontend/src/routes/dashboard/+page.server.ts'
+          git commit -m "Show invoice title across invoice views (swiss.25)"
+          git push --force origin HEAD:agent/swiss-25-title-visibility
 
       - name: Report success
         if: success()
